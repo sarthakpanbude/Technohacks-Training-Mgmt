@@ -23,13 +23,17 @@ include '../includes/sidebar.php';
         <div class="col-md-6">
             <div class="stat-card">
                 <h6 class="fw-bold mb-4">Fee Collection (Last 6 Months)</h6>
-                <canvas id="feeReportChart" height="250"></canvas>
+                <div style="height: 300px; position: relative;">
+                    <canvas id="feeReportChart"></canvas>
+                </div>
             </div>
         </div>
         <div class="col-md-6">
             <div class="stat-card">
                 <h6 class="fw-bold mb-4">Course-wise Enrollment</h6>
-                <canvas id="courseReportChart" height="250"></canvas>
+                <div style="height: 300px; position: relative;">
+                    <canvas id="courseReportChart"></canvas>
+                </div>
             </div>
         </div>
     </div>

@@ -32,7 +32,17 @@ include '../includes/sidebar.php';
                 <h6 class="mb-0 fw-bold"><?php echo $_SESSION['full_name']; ?></h6>
                 <span class="small text-muted">ID: <?php echo $s_data['enrollment_no'] ?? 'N/A'; ?></span>
             </div>
-            <img src="../assets/img/default.png" class="rounded-circle border" width="45" height="45">
+            <div class="dropdown">
+                <button class="btn p-0 border-0" type="button" data-bs-toggle="dropdown">
+                    <img src="../assets/img/default.png" class="rounded-circle border" width="45" height="45">
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow border-0 p-2">
+                    <li><h6 class="dropdown-header"><?php echo $_SESSION['full_name']; ?></h6></li>
+                    <li><a class="dropdown-item rounded mb-1" href="profile.php"><i class="fas fa-user-circle me-2"></i>My Profile</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item rounded mb-1 text-danger" href="../logout.php"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                </ul>
+            </div>
         </div>
     </header>
 

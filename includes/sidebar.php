@@ -11,6 +11,13 @@ $role = $_SESSION['role'];
             <a href="dashboard.php" class="sidebar-link <?php echo $activePage == 'dashboard' ? 'active' : ''; ?>">
                 <i class="fas fa-th-large"></i> Dashboard
             </a>
+            <div class="sidebar-header small text-muted text-uppercase fw-bold mt-3 mb-2 px-3" style="font-size: 0.7rem; letter-spacing: 1px;">Management</div>
+            <a href="admissions.php" class="sidebar-link <?php echo $activePage == 'admissions' ? 'active' : ''; ?>">
+                <i class="fas fa-id-card"></i> Admission Management
+            </a>
+            <a href="visitors.php" class="sidebar-link <?php echo $activePage == 'visitors' ? 'active' : ''; ?>">
+                <i class="fas fa-user-check"></i> Visitor Management
+            </a>
             <a href="students.php" class="sidebar-link <?php echo $activePage == 'students' ? 'active' : ''; ?>">
                 <i class="fas fa-user-graduate"></i> Students
             </a>
@@ -80,9 +87,11 @@ $role = $_SESSION['role'];
                 <i class="fas fa-award"></i> Certificates
             </a>
         <?php endif; ?>
-        
+    </div>
+
+    <div class="sidebar-footer mt-auto pt-3">
         <hr class="text-muted opacity-25">
-        <a href="../logout.php" class="sidebar-link text-danger">
+        <a href="../logout.php" class="sidebar-link text-danger fw-bold">
             <i class="fas fa-sign-out-alt"></i> Logout
         </a>
     </div>
