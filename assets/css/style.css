@@ -202,3 +202,18 @@ body {
 .animate-fade-in {
     animation: fadeIn 0.5s ease-out forwards;
 }
+
+/* Profile Avatar Circle */
+.profile-avatar-circle {
+    width: 40px;
+    height: 40px;
+    background: var(--primary);
+    color: white;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.1rem;
+    box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+}

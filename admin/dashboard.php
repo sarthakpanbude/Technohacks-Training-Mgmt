@@ -24,38 +24,8 @@ include '../includes/header.php';
 include '../includes/sidebar.php';
 ?>
 
-<main class="main-content w-100">
-    <header class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2 class="fw-bold mb-0">System Overview</h2>
-            <p class="text-muted">Welcome back, <?php echo $_SESSION['full_name']; ?></p>
-        </div>
-        <div class="d-flex align-items-center">
-            <div class="dropdown me-3">
-                <button class="btn btn-white border rounded-circle p-2" type="button" data-bs-toggle="dropdown">
-                    <i class="fas fa-bell text-muted"></i>
-                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light" style="padding: 0.35em 0.5em;">3</span>
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end shadow border-0 p-2" style="width: 300px;">
-                    <li><h6 class="dropdown-header">Notifications</h6></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item rounded mb-1" href="#">New student admission: Rahul Kumar</a></li>
-                    <li><a class="dropdown-item rounded mb-1" href="#">Fee due for Batch B102</a></li>
-                </ul>
-            </div>
-            <div class="dropdown">
-                <button class="btn p-0 border-0" type="button" data-bs-toggle="dropdown">
-                    <img src="../assets/img/default.png" class="rounded-circle border" width="40" height="40">
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end shadow border-0 p-2">
-                    <li><h6 class="dropdown-header"><?php echo $_SESSION['full_name']; ?></h6></li>
-                    <li><a class="dropdown-item rounded mb-1" href="settings.php"><i class="fas fa-user-cog me-2"></i>Profile Settings</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item rounded mb-1 text-danger" href="../logout.php"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
-                </ul>
-            </div>
-        </div>
-    </header>
+<main class="main-content w-100 p-4">
+    <?php include '../includes/topbar.php'; ?>
 
     <!-- Stats Grid -->
     <div class="row g-4 mb-4">

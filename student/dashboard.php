@@ -21,30 +21,8 @@ include '../includes/header.php';
 include '../includes/sidebar.php';
 ?>
 
-<main class="main-content w-100">
-    <header class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2 class="fw-bold mb-0">My Learning Dashboard</h2>
-            <p class="text-muted">Keep pushing your limits, <?php echo explode(' ', $_SESSION['full_name'])[0]; ?>!</p>
-        </div>
-        <div class="d-flex align-items-center">
-            <div class="text-end me-3">
-                <h6 class="mb-0 fw-bold"><?php echo $_SESSION['full_name']; ?></h6>
-                <span class="small text-muted">ID: <?php echo $s_data['enrollment_no'] ?? 'N/A'; ?></span>
-            </div>
-            <div class="dropdown">
-                <button class="btn p-0 border-0" type="button" data-bs-toggle="dropdown">
-                    <img src="../assets/img/default.png" class="rounded-circle border" width="45" height="45">
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end shadow border-0 p-2">
-                    <li><h6 class="dropdown-header"><?php echo $_SESSION['full_name']; ?></h6></li>
-                    <li><a class="dropdown-item rounded mb-1" href="profile.php"><i class="fas fa-user-circle me-2"></i>My Profile</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item rounded mb-1 text-danger" href="../logout.php"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
-                </ul>
-            </div>
-        </div>
-    </header>
+<main class="main-content w-100 p-4">
+    <?php include '../includes/topbar.php'; ?>
 
     <?php if ($activeEnrollment): ?>
     <div class="row g-4 mb-4">
