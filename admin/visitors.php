@@ -42,8 +42,8 @@ include '../includes/sidebar.php';
         <div class="col-md-3">
             <div class="stat-card border-start border-warning border-4">
                 <h6 class="text-muted small fw-bold">New Leads</h6>
-                <h3 class="fw-bold"><?php 
-                    echo count(array_filter($visitors, fn($v) => $v['status'] == 'new'));
+                <h3 class="fw-bold"><?php
+                echo count(array_filter($visitors, fn($v) => $v['status'] == 'new'));
                 ?></h3>
             </div>
         </div>
@@ -64,48 +64,64 @@ include '../includes/sidebar.php';
                 </thead>
                 <tbody>
                     <?php if (empty($visitors)): ?>
-                        <tr><td colspan="6" class="text-center py-5 text-muted">No visitor enquiries yet.</td></tr>
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">No visitor enquiries yet.</td>
+                        </tr>
                     <?php else: ?>
                         <?php foreach ($visitors as $v): ?>
-                        <tr>
-                            <td class="small text-muted"><?php echo date('M d, Y', strtotime($v['created_at'])); ?></td>
-                            <td>
-                                <div class="fw-bold"><?php echo $v['name']; ?></div>
-                                <div class="text-muted small"><?php echo $v['message'] ? '"' . substr($v['message'], 0, 30) . '..."' : ''; ?></div>
-                            </td>
-                            <td>
-                                <div class="small"><i class="fas fa-phone-alt me-1 text-primary"></i> <?php echo $v['phone']; ?></div>
-                                <div class="small"><i class="fas fa-envelope me-1 text-muted"></i> <?php echo $v['email'] ?: 'N/A'; ?></div>
-                            </td>
-                            <td><span class="badge bg-info bg-opacity-10 text-info"><?php echo $v['course_interest']; ?></span></td>
-                            <td>
-                                <?php 
-                                $badge = 'bg-secondary';
-                                if ($v['status'] == 'new') $badge = 'bg-warning text-dark';
-                                if ($v['status'] == 'contacted') $badge = 'bg-primary';
-                                if ($v['status'] == 'converted') $badge = 'bg-success';
-                                if ($v['status'] == 'rejected') $badge = 'bg-danger';
-                                ?>
-                                <span class="badge <?php echo $badge; ?> rounded-pill text-capitalize"><?php echo $v['status']; ?></span>
-                            </td>
-                            <td>
-                                <div class="dropdown">
-                                    <button class="btn btn-light btn-sm rounded-circle" type="button" data-bs-toggle="dropdown">
-                                        <i class="fas fa-ellipsis-h"></i>
-                                    </button>
-                                    <ul class="dropdown-menu dropdown-menu-end shadow border-0">
-                                        <li>
-                                            <form action="" method="POST">
-                                                <input type="hidden" name="visitor_id" value="<?php echo $v['id']; ?>">
-                                                <button type="submit" name="update_visitor_status" value="contacted" class="dropdown-item small">Mark Contacted</button>
-                                                <button type="submit" name="update_visitor_status" value="converted" class="dropdown-item small text-success">Converted to Admission</button>
-                                                <button type="submit" name="update_visitor_status" value="rejected" class="dropdown-item small text-danger">Rejected</button>
-                                            </form>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </td>
-                        </tr>
+                            <tr>
+                                <td class="small text-muted"><?php echo date('M d, Y', strtotime($v['created_at'])); ?></td>
+                                <td>
+                                    <div class="fw-bold"><?php echo $v['name']; ?></div>
+                                    <div class="text-muted small">
+                                        <?php echo $v['message'] ? '"' . substr($v['message'], 0, 30) . '..."' : ''; ?></div>
+                                </td>
+                                <td>
+                                    <div class="small"><i class="fas fa-phone-alt me-1 text-primary"></i>
+                                        <?php echo $v['phone']; ?></div>
+                                    <div class="small"><i class="fas fa-envelope me-1 text-muted"></i>
+                                        <?php echo $v['email'] ?: 'N/A'; ?></div>
+                                </td>
+                                <td><span
+                                        class="badge bg-info bg-opacity-10 text-info"><?php echo $v['course_interest']; ?></span>
+                                </td>
+                                <td>
+                                    <?php
+                                    $badge = 'bg-secondary';
+                                    if ($v['status'] == 'new')
+                                        $badge = 'bg-warning text-dark';
+                                    if ($v['status'] == 'contacted')
+                                        $badge = 'bg-primary';
+                                    if ($v['status'] == 'converted')
+                                        $badge = 'bg-success';
+                                    if ($v['status'] == 'rejected')
+                                        $badge = 'bg-danger';
+                                    ?>
+                                    <span
+                                        class="badge <?php echo $badge; ?> rounded-pill text-capitalize"><?php echo $v['status']; ?></span>
+                                </td>
+                                <td>
+                                    <div class="dropdown">
+                                        <button class="btn btn-light btn-sm rounded-circle" type="button"
+                                            data-bs-toggle="dropdown">
+                                            <i class="fas fa-ellipsis-h"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                                            <li>
+                                                <form action="" method="POST">
+                                                    <input type="hidden" name="visitor_id" value="<?php echo $v['id']; ?>">
+                                                    <button type="submit" name="update_visitor_status" value="contacted"
+                                                        class="dropdown-item small">Mark Contacted</button>
+                                                    <button type="submit" name="update_visitor_status" value="converted"
+                                                        class="dropdown-item small text-success">Converted to Admission</button>
+                                                    <button type="submit" name="update_visitor_status" value="rejected"
+                                                        class="dropdown-item small text-danger">Rejected</button>
+                                                </form>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>
                 </tbody>

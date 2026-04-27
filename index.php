@@ -51,7 +51,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     <div class="auth-card animate-fade-in">
         <div class="auth-logo">
-            <i class="fas fa-microchip me-2"></i>TechnoHacks Solutions
+            <img src="assets/img/logo.png" alt="TechnoHacks" style="max-height: 80px; width: auto; margin-bottom: 1rem;">
         </div>
         <h4 class="text-center mb-4" style="font-weight: 700;">ERP Portal Login</h4>
         
