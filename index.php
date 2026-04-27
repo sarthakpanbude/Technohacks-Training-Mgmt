@@ -50,8 +50,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <body class="auth-wrapper">
 
     <div class="auth-card animate-fade-in">
-        <div class="auth-logo">
-            <img src="assets/img/logo.png" alt="TechnoHacks" style="max-height: 80px; width: auto; margin-bottom: 1rem;">
+        <div class="auth-logo text-center">
+            <img src="assets/img/logo.png" alt="TechnoHacks Solutions" style="max-height: 120px; width: auto; margin-bottom: 0.5rem; border-radius: 12px;">
+            <div class="small text-muted mt-2 lh-sm" style="font-size: 0.8rem;">
+                <strong>TechnoHacks Solutions Pvt. Ltd.</strong><br>
+                Fastest-growing IT company in Nashik.<br>
+                CIN: U62099MH2024PTC424756
+            </div>
         </div>
         <h4 class="text-center mb-4" style="font-weight: 700;">ERP Portal Login</h4>
         

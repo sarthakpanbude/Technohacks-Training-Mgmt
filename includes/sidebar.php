@@ -2,8 +2,8 @@
 $role = $_SESSION['role'];
 ?>
 <div class="sidebar">
-    <div class="auth-logo mb-4 text-start">
-        <img src="../assets/img/logo.png" alt="TechnoHacks" style="max-height: 50px; width: auto;">
+    <div class="auth-logo mb-4 text-center mt-2">
+        <img src="../assets/img/logo.png" alt="TechnoHacks Solutions" style="max-height: 80px; width: auto; max-width: 100%; object-fit: contain;">
     </div>
     
     <div class="sidebar-menu">
