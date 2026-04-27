@@ -3,7 +3,7 @@ $role = $_SESSION['role'];
 ?>
 <div class="sidebar">
     <div class="auth-logo mb-4 text-start">
-        <i class="fas fa-microchip me-2"></i>TechnoHacks
+        <img src="../assets/img/logo.png" alt="TechnoHacks" style="max-height: 50px; width: auto;">
     </div>
     
     <div class="sidebar-menu">
