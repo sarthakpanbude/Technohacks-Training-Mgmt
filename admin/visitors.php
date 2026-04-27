@@ -9,7 +9,7 @@ $activePage = "visitors";
 // Handle Status Update
 if (isset($_POST['update_visitor_status'])) {
     $id = $_POST['visitor_id'];
-    $status = $_POST['status'];
+    $status = $_POST['update_visitor_status'];
     $stmt = $pdo->prepare("UPDATE visitors SET status = ? WHERE id = ?");
     $stmt->execute([$status, $id]);
     header("Location: visitors.php?msg=Status Updated");

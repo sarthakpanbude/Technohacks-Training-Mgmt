@@ -107,6 +107,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         <hr class="my-4">
         <div class="text-center small">
+            <span class="text-muted">Don't have an account?</span> 
+            <a href="register.php" class="text-primary fw-bold text-decoration-none">Register Here</a>
+        </div>
+        <div class="text-center small mt-2">
             <span class="text-muted">Not a student yet?</span> 
             <a href="student/apply.php" class="text-primary fw-bold text-decoration-none">Apply Now</a>
         </div>

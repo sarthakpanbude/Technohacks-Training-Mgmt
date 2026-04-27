@@ -205,8 +205,21 @@ CREATE TABLE `placements` (
   FOREIGN KEY (`student_id`) REFERENCES `students`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Table: visitors
+CREATE TABLE `visitors` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL,
+  `email` varchar(100) NOT NULL,
+  `phone` varchar(15) DEFAULT NULL,
+  `course_interest` varchar(100) DEFAULT NULL,
+  `message` text DEFAULT NULL,
+  `status` varchar(20) DEFAULT 'new',
+  `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Dummy Admin Account (Password: admin123)
 INSERT INTO `users` (`username`, `password`, `role`, `email`, `full_name`) VALUES
-('admin', '$2y$10$Wp8Mh.vK/lH9Q8X7u6f7e.v7G9/L6H7G8V9I0J1K2L3M4N5O6P7Q8', 'admin', 'admin@technohacks.com', 'System Administrator');
+('admin', '$2y$10$qyuP0Q.pVm/BsKsyuriMLeNQVu.hkbcW77QryN0FV4FCegj8T2vbW', 'admin', 'admin@technohacks.com', 'System Administrator');
 
 COMMIT;

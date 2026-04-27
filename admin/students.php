@@ -9,7 +9,7 @@ $activePage = "students";
 // Handle Status Update
 if (isset($_POST['update_status'])) {
     $id = $_POST['student_id'];
-    $status = $_POST['status'];
+    $status = $_POST['update_status'];
     $stmt = $pdo->prepare("UPDATE students SET admission_status = ? WHERE id = ?");
     $stmt->execute([$status, $id]);
     header("Location: students.php?msg=Status Updated");
