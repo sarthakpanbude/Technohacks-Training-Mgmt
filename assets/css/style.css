@@ -64,6 +64,27 @@ body {
     border-color: var(--primary);
 }
 
+.login-tabs {
+    background: var(--bg-main);
+    padding: 5px;
+    border-radius: 12px;
+}
+
+.login-tabs .nav-link {
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    padding: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.login-tabs .nav-link.active {
+    background: var(--bg-white) !important;
+    color: var(--primary) !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
 .btn-primary {
     background-color: var(--primary);
     border: none;

@@ -53,8 +53,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <div class="auth-logo">
             <i class="fas fa-microchip me-2"></i>TechnoHacks Solutions
         </div>
-        <h4 class="text-center mb-4" style="font-weight: 700;">Welcome Back</h4>
+        <h4 class="text-center mb-4" style="font-weight: 700;">ERP Portal Login</h4>
         
+        <!-- Role Tabs -->
+        <ul class="nav nav-pills nav-justified mb-4 login-tabs" id="pills-tab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" onclick="updateCredentials('admin')" data-bs-toggle="pill" type="button">Admin</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" onclick="updateCredentials('teacher')" data-bs-toggle="pill" type="button">Teacher</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" onclick="updateCredentials('student')" data-bs-toggle="pill" type="button">Student</button>
+            </li>
+        </ul>
+
         <?php if ($error): ?>
             <div class="alert alert-danger mb-3" style="border-radius: 10px; font-size: 0.9rem;">
                 <i class="fas fa-exclamation-circle me-2"></i><?php echo $error; ?>
@@ -66,21 +79,31 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <label class="form-label small fw-bold">Username</label>
                 <div class="input-group">
                     <span class="input-group-text bg-light border-end-0"><i class="fas fa-user text-muted"></i></span>
-                    <input type="text" name="username" class="form-control border-start-0 ps-0" placeholder="Enter username" required>
+                    <input type="text" name="username" id="login-username" class="form-control border-start-0 ps-0" placeholder="Enter username" required>
                 </div>
             </div>
             <div class="mb-4">
                 <label class="form-label small fw-bold">Password</label>
                 <div class="input-group">
                     <span class="input-group-text bg-light border-end-0"><i class="fas fa-lock text-muted"></i></span>
-                    <input type="password" name="password" class="form-control border-start-0 ps-0" placeholder="Enter password" required>
+                    <input type="password" name="password" id="login-password" class="form-control border-start-0 ps-0" placeholder="Enter password" required>
                 </div>
             </div>
-            <button type="submit" class="btn btn-primary w-100 mb-3">Sign In</button>
+            <button type="submit" class="btn btn-primary w-100 mb-3 py-2 fw-bold">
+                <i class="fas fa-sign-in-alt me-2"></i>Sign In
+            </button>
             <div class="text-center">
                 <a href="#" class="text-decoration-none small text-muted">Forgot password?</a>
             </div>
         </form>
+
+        <div class="mt-4 p-3 bg-light rounded-3 border">
+            <p class="small text-muted mb-2 fw-bold"><i class="fas fa-info-circle me-1"></i> Demo Access:</p>
+            <div class="d-flex justify-content-between align-items-center">
+                <code class="small" id="demo-creds">admin / admin123</code>
+                <button class="btn btn-sm btn-outline-secondary border-0" onclick="copyDemo()"><i class="far fa-copy"></i></button>
+            </div>
+        </div>
 
         <hr class="my-4">
         <div class="text-center small">
@@ -90,5 +113,34 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function updateCredentials(role) {
+            const userField = document.getElementById('login-username');
+            const passField = document.getElementById('login-password');
+            const demoText = document.getElementById('demo-creds');
+            
+            let u = '', p = '';
+            if(role === 'admin') {
+                u = 'admin'; p = 'admin123';
+            } else if(role === 'teacher') {
+                u = 'teacher'; p = 'teacher123';
+            } else if(role === 'student') {
+                u = 'student'; p = 'student123';
+            }
+            
+            demoText.innerText = u + ' / ' + p;
+            userField.value = u;
+            passField.value = p;
+        }
+
+        function copyDemo() {
+            const creds = document.getElementById('demo-creds').innerText.split(' / ');
+            document.getElementById('login-username').value = creds[0];
+            document.getElementById('login-password').value = creds[1];
+        }
+        
+        // Initialize with admin creds
+        window.onload = () => updateCredentials('admin');
+    </script>
 </body>
 </html>
