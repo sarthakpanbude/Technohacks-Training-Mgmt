@@ -1,0 +1,154 @@
+/* TechnoHacks Solutions - ERP Modern Design System */
+
+:root {
+    --primary: #2563eb;
+    --primary-dark: #1e40af;
+    --secondary: #64748b;
+    --accent: #3b82f6;
+    --success: #10b981;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --info: #06b6d4;
+    --bg-main: #f8fafc;
+    --bg-white: #ffffff;
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --border: #e2e8f0;
+    --sidebar-width: 260px;
+    --glass-bg: rgba(255, 255, 255, 0.8);
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    overflow-x: hidden;
+}
+
+/* Authentication Pages */
+.auth-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+}
+
+.auth-card {
+    background: var(--bg-white);
+    border-radius: 20px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 450px;
+    padding: 2.5rem;
+    border: 1px solid var(--border);
+}
+
+.auth-logo {
+    font-weight: 800;
+    font-size: 1.5rem;
+    color: var(--primary);
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.form-control {
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+    border-color: var(--primary);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-dark);
+    transform: translateY(-1px);
+}
+
+/* Sidebar & Layout */
+.sidebar {
+    width: var(--sidebar-width);
+    height: 100vh;
+    position: fixed;
+    left: 0;
+    top: 0;
+    background-color: var(--bg-white);
+    border-right: 1px solid var(--border);
+    z-index: 1000;
+    padding: 1.5rem;
+}
+
+.main-content {
+    margin-left: var(--sidebar-width);
+    padding: 2rem;
+}
+
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    border-radius: 10px;
+    margin-bottom: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+.sidebar-link i {
+    width: 24px;
+    margin-right: 12px;
+    font-size: 1.2rem;
+}
+
+.sidebar-link:hover, .sidebar-link.active {
+    background-color: #eff6ff;
+    color: var(--primary);
+}
+
+/* Dashboard Cards */
+.stat-card {
+    background: var(--bg-white);
+    border-radius: 16px;
+    padding: 1.5rem;
+    border: 1px solid var(--border);
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+}
+
+.icon-box {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+}
