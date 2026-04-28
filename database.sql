@@ -210,8 +210,12 @@ CREATE TABLE `visitors` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL,
   `email` varchar(100) NOT NULL,
+  `gender` varchar(20) DEFAULT NULL,
+  `age` int(11) DEFAULT NULL,
   `phone` varchar(15) DEFAULT NULL,
   `course_interest` varchar(100) DEFAULT NULL,
+  `type` varchar(50) DEFAULT NULL,
+  `mode` varchar(50) DEFAULT NULL,
   `message` text DEFAULT NULL,
   `status` varchar(20) DEFAULT 'new',
   `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
@@ -245,7 +249,33 @@ CREATE TABLE `invoices` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Dummy Admin Account (Password: admin123)
-INSERT INTO `users` (`username`, `password`, `role`, `email`, `full_name`) VALUES
+INSERT IGNORE INTO `users` (`username`, `password`, `role`, `email`, `full_name`) VALUES
 ('admin', '$2y$10$qyuP0Q.pVm/BsKsyuriMLeNQVu.hkbcW77QryN0FV4FCegj8T2vbW', 'admin', 'admin@technohacks.com', 'System Administrator');
+
+-- Pre-fill Courses
+INSERT IGNORE INTO courses (name, fees, level) VALUES 
+('Networking & Linux', 15000, 'beginner'), 
+('Prompt Engineering', 12000, 'intermediate'), 
+('Software Testing', 15000, 'beginner'), 
+('UI/UX Designing', 18000, 'beginner'), 
+('Web Design & Development', 20000, 'beginner'), 
+('Human Resource (HR)', 10000, 'beginner'), 
+('Finance & Accounting', 12000, 'beginner'), 
+('Python Development', 15000, 'beginner'), 
+('App Development', 22000, 'intermediate'), 
+('Blockchain', 25000, 'advanced'), 
+('Business Analytics', 20000, 'intermediate'), 
+('Business Development', 15000, 'beginner'), 
+('C & C++ Programming', 10000, 'beginner'), 
+('Cloud Computing', 20000, 'intermediate'), 
+('Cybersecurity', 22000, 'intermediate'), 
+('Data Analytics', 18000, 'intermediate'), 
+('Data Science', 25000, 'advanced'), 
+('DevOps', 22000, 'advanced'), 
+('Digital Marketing', 15000, 'beginner'), 
+('Full Stack Development', 30000, 'intermediate'), 
+('Graphics Designing', 12000, 'beginner'), 
+('Java Development', 18000, 'intermediate'), 
+('Machine Learning', 28000, 'advanced');
 
 COMMIT;
