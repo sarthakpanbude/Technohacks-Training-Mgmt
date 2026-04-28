@@ -25,6 +25,9 @@ while($row = $enrollmentQuery->fetch()) {
 }
 $chartData = json_encode(array_values($monthlyEnrollments));
 
+// Fetch Recent Inquiries
+$recentInquiries = $pdo->query("SELECT * FROM visitors ORDER BY created_at DESC LIMIT 5")->fetchAll();
+
 include '../includes/header.php';
 include '../includes/sidebar.php';
 ?>
@@ -135,52 +138,39 @@ include '../includes/sidebar.php';
             </div>
         </div>
 
-        <!-- Recent Placements -->
+        <!-- Recent Inquiries -->
         <div class="col-md-4">
             <div class="stat-card h-100">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h5 class="fw-bold">Top Placements</h5>
-                    <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3">Live Track</span>
+                    <h5 class="fw-bold">Recent Inquiries</h5>
+                    <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3">New</span>
                 </div>
                 <div class="list-group list-group-flush">
-                    <div class="list-group-item px-0 py-3 bg-transparent border-bottom">
-                        <div class="d-flex align-items-center">
-                            <div class="avatar me-3 bg-info bg-opacity-10 text-info rounded-circle d-flex align-items-center justify-content-center" style="width: 45px; height: 45px; font-weight: bold;">JD</div>
-                            <div>
-                                <h6 class="mb-0 fw-bold">John Doe</h6>
-                                <p class="text-muted small mb-0">Google • Full Stack Dev</p>
-                            </div>
-                            <div class="ms-auto text-end">
-                                <span class="fw-bold text-success">12 LPA</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="list-group-item px-0 py-3 bg-transparent border-bottom">
-                        <div class="d-flex align-items-center">
-                            <div class="avatar me-3 bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 45px; height: 45px; font-weight: bold;">AS</div>
-                            <div>
-                                <h6 class="mb-0 fw-bold">Anjali Singh</h6>
-                                <p class="text-muted small mb-0">Amazon • Data Analyst</p>
-                            </div>
-                            <div class="ms-auto text-end">
-                                <span class="fw-bold text-success">10 LPA</span>
+                    <?php if (empty($recentInquiries)): ?>
+                        <div class="text-center py-4 text-muted small">No recent inquiries.</div>
+                    <?php else: ?>
+                        <?php foreach ($recentInquiries as $inq): ?>
+                        <div class="list-group-item px-0 py-3 bg-transparent border-bottom">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar me-3 bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 40px; height: 40px; font-size: 0.8rem;">
+                                    <?php 
+                                        $names = explode(' ', $inq['name']);
+                                        echo strtoupper(substr($names[0], 0, 1) . (isset($names[1]) ? substr($names[1], 0, 1) : ''));
+                                    ?>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-0 fw-bold small"><?php echo htmlspecialchars($inq['name']); ?></h6>
+                                    <p class="text-muted extra-small mb-0"><?php echo htmlspecialchars($inq['course_interest']); ?></p>
+                                </div>
+                                <div class="ms-auto text-end">
+                                    <span class="text-muted extra-small"><?php echo date('d M', strtotime($inq['created_at'])); ?></span>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="list-group-item px-0 py-3 bg-transparent border-0">
-                        <div class="d-flex align-items-center">
-                            <div class="avatar me-3 bg-warning bg-opacity-10 text-warning rounded-circle d-flex align-items-center justify-content-center" style="width: 45px; height: 45px; font-weight: bold;">RV</div>
-                            <div>
-                                <h6 class="mb-0 fw-bold">Rohan Verma</h6>
-                                <p class="text-muted small mb-0">Microsoft • UI/UX Designer</p>
-                            </div>
-                            <div class="ms-auto text-end">
-                                <span class="fw-bold text-success">15 LPA</span>
-                            </div>
-                        </div>
-                    </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
                 </div>
-                <button class="btn btn-primary-light w-100 mt-3 fw-bold py-2 border-0" style="color: var(--primary);">View Success Stories</button>
+                <a href="visitors.php" class="btn btn-primary-light w-100 mt-3 fw-bold py-2 border-0 small" style="color: var(--primary);">View All Inquiries</a>
             </div>
         </div>
 
