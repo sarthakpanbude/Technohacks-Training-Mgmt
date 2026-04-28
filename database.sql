@@ -7,6 +7,7 @@ SET time_zone = "+00:00";
 -- --------------------------------------------------------
 
 -- Table: users
+DROP TABLE IF EXISTS `users`;
 CREATE TABLE `users` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `username` varchar(50) NOT NULL UNIQUE,
@@ -21,6 +22,7 @@ CREATE TABLE `users` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Table: students
+DROP TABLE IF EXISTS `students`;
 CREATE TABLE `students` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) NOT NULL,
@@ -38,6 +40,7 @@ CREATE TABLE `students` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Table: teachers
+DROP TABLE IF EXISTS `teachers`;
 CREATE TABLE `teachers` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) NOT NULL,
@@ -49,6 +52,7 @@ CREATE TABLE `teachers` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Table: courses
+DROP TABLE IF EXISTS `courses`;
 CREATE TABLE `courses` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL,
@@ -60,6 +64,7 @@ CREATE TABLE `courses` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Table: batches
+DROP TABLE IF EXISTS `batches`;
 CREATE TABLE `batches` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `course_id` int(11) NOT NULL,
@@ -76,6 +81,7 @@ CREATE TABLE `batches` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Table: enrollments
+DROP TABLE IF EXISTS `enrollments`;
 CREATE TABLE `enrollments` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `student_id` int(11) NOT NULL,
@@ -88,6 +94,7 @@ CREATE TABLE `enrollments` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Table: payments
+DROP TABLE IF EXISTS `payments`;
 CREATE TABLE `payments` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `student_id` int(11) NOT NULL,
@@ -102,6 +109,7 @@ CREATE TABLE `payments` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Table: attendance
+DROP TABLE IF EXISTS `attendance`;
 CREATE TABLE `attendance` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `student_id` int(11) NOT NULL,
@@ -114,6 +122,7 @@ CREATE TABLE `attendance` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Table: assignments
+DROP TABLE IF EXISTS `assignments`;
 CREATE TABLE `assignments` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `batch_id` int(11) NOT NULL,
@@ -127,6 +136,7 @@ CREATE TABLE `assignments` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Table: submissions
+DROP TABLE IF EXISTS `submissions`;
 CREATE TABLE `submissions` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `assignment_id` int(11) NOT NULL,
@@ -143,6 +153,7 @@ CREATE TABLE `submissions` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Table: exams
+DROP TABLE IF EXISTS `exams`;
 CREATE TABLE `exams` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `batch_id` int(11) NOT NULL,
@@ -157,6 +168,7 @@ CREATE TABLE `exams` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Table: tickets
+DROP TABLE IF EXISTS `tickets`;
 CREATE TABLE `tickets` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) NOT NULL,
@@ -171,6 +183,7 @@ CREATE TABLE `tickets` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Table: notifications
+DROP TABLE IF EXISTS `notifications`;
 CREATE TABLE `notifications` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) NOT NULL,
@@ -182,6 +195,7 @@ CREATE TABLE `notifications` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Table: certificates
+DROP TABLE IF EXISTS `certificates`;
 CREATE TABLE `certificates` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `enrollment_id` int(11) NOT NULL,
@@ -193,6 +207,7 @@ CREATE TABLE `certificates` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Table: placements
+DROP TABLE IF EXISTS `placements`;
 CREATE TABLE `placements` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `student_id` int(11) NOT NULL,
@@ -206,6 +221,7 @@ CREATE TABLE `placements` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Table: visitors
+DROP TABLE IF EXISTS `visitors`;
 CREATE TABLE `visitors` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL,
@@ -223,6 +239,7 @@ CREATE TABLE `visitors` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Table: installments
+DROP TABLE IF EXISTS `installments`;
 CREATE TABLE `installments` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `student_id` int(11) NOT NULL,
@@ -236,6 +253,7 @@ CREATE TABLE `installments` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Table: invoices
+DROP TABLE IF EXISTS `invoices`;
 CREATE TABLE `invoices` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `student_id` int(11) NOT NULL,
