@@ -12,6 +12,12 @@ $activeBatches = $pdo->query("SELECT COUNT(*) FROM batches WHERE status = 'activ
 $totalCourses = $pdo->query("SELECT COUNT(*) FROM courses")->fetchColumn();
 $pendingTickets = $pdo->query("SELECT COUNT(*) FROM tickets WHERE status = 'open'")->fetchColumn();
 
+// Fetch Fee Stats
+$totalCollected = $pdo->query("SELECT SUM(amount) FROM invoices")->fetchColumn() ?: 0;
+$totalPendingAmt = $pdo->query("SELECT SUM(amount) FROM installments WHERE status = 'Pending'")->fetchColumn() ?: 0;
+$overdueCount = $pdo->query("SELECT COUNT(*) FROM installments WHERE status = 'Pending' AND due_date < CURDATE()")->fetchColumn() ?: 0;
+$recentTransactions = $pdo->query("SELECT COUNT(*) FROM invoices WHERE DATE(payment_date) = CURDATE()")->fetchColumn() ?: 0;
+
 // Fetch Monthly Enrollments for Chart
 $monthlyEnrollments = array_fill(0, 12, 0);
 $enrollmentQuery = $pdo->query("SELECT MONTH(enrollment_date) as m, COUNT(*) as c FROM enrollments WHERE YEAR(enrollment_date) = YEAR(CURDATE()) GROUP BY MONTH(enrollment_date)");
@@ -26,6 +32,16 @@ include '../includes/sidebar.php';
 
 <main class="main-content w-100 p-4">
     <?php include '../includes/topbar.php'; ?>
+
+    <?php if ($overdueCount > 0): ?>
+    <div class="alert alert-danger d-flex align-items-center mb-4 border-0 shadow-sm" style="border-radius: 12px; border-left: 5px solid var(--bs-danger) !important;">
+        <i class="fas fa-exclamation-triangle fa-lg me-3"></i>
+        <div>
+            <strong>Fees Due Reminder:</strong> <?php echo $overdueCount; ?> student installment(s) are overdue. 
+            <a href="../fees/installments.php" class="alert-link ms-2">View Pending Installments &rarr;</a>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <!-- Stats Grid -->
     <div class="row g-4 mb-4">
@@ -63,6 +79,47 @@ include '../includes/sidebar.php';
                 </div>
                 <h3 class="fw-bold"><?php echo $pendingTickets; ?></h3>
                 <p class="text-muted small mb-0">Open Tickets</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Financial Overview Grid -->
+    <h5 class="fw-bold mb-3">Financial Overview</h5>
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="stat-card border-bottom border-success border-3">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <p class="text-muted small fw-bold mb-0 text-uppercase">Collected Fees</p>
+                    <i class="fas fa-rupee-sign text-success"></i>
+                </div>
+                <h4 class="fw-bold mb-0">₹<?php echo number_format($totalCollected, 2); ?></h4>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card border-bottom border-warning border-3">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <p class="text-muted small fw-bold mb-0 text-uppercase">Pending Fees</p>
+                    <i class="fas fa-hourglass-half text-warning"></i>
+                </div>
+                <h4 class="fw-bold mb-0">₹<?php echo number_format($totalPendingAmt, 2); ?></h4>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card border-bottom border-danger border-3">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <p class="text-muted small fw-bold mb-0 text-uppercase">Overdue Count</p>
+                    <i class="fas fa-exclamation-circle text-danger"></i>
+                </div>
+                <h4 class="fw-bold mb-0"><?php echo $overdueCount; ?></h4>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card border-bottom border-primary border-3">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <p class="text-muted small fw-bold mb-0 text-uppercase">Today's Txns</p>
+                    <i class="fas fa-exchange-alt text-primary"></i>
+                </div>
+                <h4 class="fw-bold mb-0"><?php echo $recentTransactions; ?></h4>
             </div>
         </div>
     </div>

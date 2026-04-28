@@ -218,6 +218,32 @@ CREATE TABLE `visitors` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Table: installments
+CREATE TABLE `installments` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `student_id` int(11) NOT NULL,
+  `installment_no` int(11) NOT NULL,
+  `amount` decimal(10,2) NOT NULL,
+  `due_date` date NOT NULL,
+  `status` varchar(20) DEFAULT 'Pending',
+  `late_fee` decimal(10,2) DEFAULT 0.00,
+  PRIMARY KEY (`id`),
+  FOREIGN KEY (`student_id`) REFERENCES `students`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Table: invoices
+CREATE TABLE `invoices` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `student_id` int(11) NOT NULL,
+  `receipt_no` varchar(50) NOT NULL UNIQUE,
+  `amount` decimal(10,2) NOT NULL,
+  `payment_mode` varchar(50) NOT NULL,
+  `payment_date` timestamp DEFAULT current_timestamp(),
+  `created_at` timestamp DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  FOREIGN KEY (`student_id`) REFERENCES `students`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Dummy Admin Account (Password: admin123)
 INSERT INTO `users` (`username`, `password`, `role`, `email`, `full_name`) VALUES
 ('admin', '$2y$10$qyuP0Q.pVm/BsKsyuriMLeNQVu.hkbcW77QryN0FV4FCegj8T2vbW', 'admin', 'admin@technohacks.com', 'System Administrator');

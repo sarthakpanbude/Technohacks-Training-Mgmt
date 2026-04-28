@@ -30,9 +30,13 @@ $role = $_SESSION['role'];
             <a href="batches.php" class="sidebar-link <?php echo $activePage == 'batches' ? 'active' : ''; ?>">
                 <i class="fas fa-layer-group"></i> Batch Schedules
             </a>
+<<<<<<< HEAD
 
             <div class="sidebar-header small text-muted text-uppercase fw-bold mt-4 mb-2 px-3" style="font-size: 0.7rem; letter-spacing: 1px;">Operations</div>
             <a href="fees.php" class="sidebar-link <?php echo $activePage == 'fees' ? 'active' : ''; ?>">
+=======
+            <a href="../fees/installments.php" class="sidebar-link <?php echo $activePage == 'fees' ? 'active' : ''; ?>">
+>>>>>>> 7e34921 (my changes)
                 <i class="fas fa-file-invoice-dollar"></i> Fees & Billing
             </a>
             <a href="attendance.php" class="sidebar-link <?php echo $activePage == 'attendance' ? 'active' : ''; ?>">
