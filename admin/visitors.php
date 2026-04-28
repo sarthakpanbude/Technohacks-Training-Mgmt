@@ -10,10 +10,59 @@ $activePage = "visitors";
 if (isset($_POST['update_visitor_status'])) {
     $id = $_POST['visitor_id'];
     $status = $_POST['update_visitor_status'];
-    $stmt = $pdo->prepare("UPDATE visitors SET status = ? WHERE id = ?");
-    $stmt->execute([$status, $id]);
-    header("Location: visitors.php?msg=Status Updated");
-    exit;
+    
+    try {
+        $pdo->beginTransaction();
+        
+        $stmt = $pdo->prepare("UPDATE visitors SET status = ? WHERE id = ?");
+        $stmt->execute([$status, $id]);
+        
+        // If converted, create student account
+        if ($status == 'converted') {
+            $stmt = $pdo->prepare("SELECT * FROM visitors WHERE id = ?");
+            $stmt->execute([$id]);
+            $visitor = $stmt->fetch();
+            
+            if ($visitor) {
+                // Check if user already exists
+                $check = $pdo->prepare("SELECT id FROM users WHERE email = ?");
+                $check->execute([$visitor['email']]);
+                if (!$check->fetch()) {
+                    // Generate username from email (e.g. john.doe from john.doe@email.com)
+                    $username = strstr($visitor['email'], '@', true);
+                    if (!$username) $username = strtolower(preg_replace("/[^a-zA-Z0-9]/", "", $visitor['name']));
+                    
+                    // Ensure unique username
+                    $uCheck = $pdo->prepare("SELECT id FROM users WHERE username = ?");
+                    $uCheck->execute([$username]);
+                    if ($uCheck->fetch()) {
+                        $username .= rand(10, 99);
+                    }
+                    
+                    $password = password_hash('student123', PASSWORD_DEFAULT);
+                    
+                    // Insert into users
+                    $stmt = $pdo->prepare("INSERT INTO users (username, password, role, email, full_name) VALUES (?, ?, 'student', ?, ?)");
+                    $stmt->execute([$username, $password, $visitor['email'], $visitor['name']]);
+                    $user_id = $pdo->lastInsertId();
+                    
+                    // Insert into students
+                    $enrollment_no = 'TH' . date('Y') . str_pad($user_id, 4, '0', STR_PAD_LEFT);
+                    $referral_code = strtoupper(substr(md5($user_id . time()), 0, 6));
+                    
+                    $stmt = $pdo->prepare("INSERT INTO students (user_id, enrollment_no, phone, admission_status, referral_code) VALUES (?, ?, ?, 'enrolled', ?)");
+                    $stmt->execute([$user_id, $enrollment_no, $visitor['phone'], $referral_code]);
+                }
+            }
+        }
+        
+        $pdo->commit();
+        header("Location: visitors.php?msg=Status Updated & Account Created");
+        exit;
+    } catch (PDOException $e) {
+        $pdo->rollBack();
+        die("Error: " . $e->getMessage());
+    }
 }
 
 // Fetch Visitors
@@ -29,7 +78,7 @@ include '../includes/sidebar.php';
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h4 class="fw-bold mb-0">Student Inquiries</h4>
-            <p class="text-muted small">Approve or Reject new student applications.</p>
+            <p class="text-muted small">Process new student applications.</p>
         </div>
         <button class="btn btn-primary shadow-sm" onclick="window.print()"><i class="fas fa-print me-2"></i>Export List</button>
     </div>
@@ -55,7 +104,7 @@ include '../includes/sidebar.php';
                 <thead class="bg-light">
                     <tr>
                         <th class="px-4 border-0">Student</th>
-                        <th class="border-0">Gender/Age</th>
+                        <th class="border-0">Type/Mode</th>
                         <th class="border-0">Domain</th>
                         <th class="border-0">Contact</th>
                         <th class="border-0">Status</th>
@@ -73,13 +122,9 @@ include '../includes/sidebar.php';
                                 <td class="px-4">
                                     <div class="d-flex align-items-center">
                                         <div class="me-3">
-                                            <?php if ($v['photo']): ?>
-                                                <img src="../<?php echo $v['photo']; ?>" class="rounded-circle border" width="45" height="45" style="object-fit: cover;">
-                                            <?php else: ?>
-                                                <div class="rounded-circle bg-light d-flex align-items-center justify-content-center border" width="45" height="45">
-                                                    <i class="fas fa-user text-muted"></i>
-                                                </div>
-                                            <?php endif; ?>
+                                            <div class="rounded-circle bg-light d-flex align-items-center justify-content-center border" style="width: 45px; height: 45px;">
+                                                <i class="fas fa-user text-muted"></i>
+                                            </div>
                                         </div>
                                         <div>
                                             <div class="fw-bold"><?php echo $v['name']; ?></div>
@@ -88,8 +133,8 @@ include '../includes/sidebar.php';
                                     </div>
                                 </td>
                                 <td>
-                                    <span class="badge bg-light text-dark border"><?php echo $v['gender']; ?></span>
-                                    <span class="badge bg-light text-dark border"><?php echo $v['age']; ?> yrs</span>
+                                    <span class="badge bg-primary bg-opacity-10 text-primary border-0"><?php echo $v['type']; ?></span>
+                                    <span class="badge bg-info bg-opacity-10 text-info border-0"><?php echo $v['mode']; ?></span>
                                 </td>
                                 <td>
                                     <div class="fw-medium text-primary small"><?php echo $v['course_interest']; ?></div>
@@ -113,10 +158,10 @@ include '../includes/sidebar.php';
                                         <form action="" method="POST" class="d-inline">
                                             <input type="hidden" name="visitor_id" value="<?php echo $v['id']; ?>">
                                             <?php if ($v['status'] == 'new'): ?>
-                                                <button type="submit" name="update_visitor_status" value="converted" class="btn btn-sm btn-success rounded-pill px-3">Approve</button>
-                                                <button type="submit" name="update_visitor_status" value="rejected" class="btn btn-sm btn-outline-danger rounded-pill px-3">Reject</button>
+                                                <button type="submit" name="update_visitor_status" value="converted" class="btn btn-sm btn-success rounded-pill px-3">Converted to Admission</button>
+                                                <button type="submit" name="update_visitor_status" value="rejected" class="btn btn-sm btn-outline-danger rounded-pill px-3">Rejected</button>
                                             <?php else: ?>
-                                                <button type="button" class="btn btn-sm btn-light border rounded-pill px-3 disabled">Handled</button>
+                                                <button type="button" class="btn btn-sm btn-light border rounded-pill px-3 disabled"><i class="fas fa-check-circle me-1 text-success"></i> Handled</button>
                                             <?php endif; ?>
                                         </form>
                                     </div>

@@ -64,7 +64,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <h6 class="fw-bold mb-2">Interested in a Course?</h6>
             <p class="small text-muted mb-3">Submit your inquiry and our team will get in touch with you shortly.</p>
             <a href="inquiry.php" class="btn btn-primary w-100 rounded-pill py-2 shadow-sm fw-bold">
-                <i class="fas fa-paper-plane me-2"></i>Apply for Admission
+                <i class="fas fa-paper-plane me-2"></i>Course Inquiry Form
             </a>
         </div>
 

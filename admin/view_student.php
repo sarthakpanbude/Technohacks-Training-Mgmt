@@ -86,15 +86,32 @@ include '../includes/sidebar.php';
                                     <th class="border-0">Course</th>
                                     <th class="border-0">Status</th>
                                     <th class="border-0">Date</th>
+                                    <th class="border-0 text-end">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($enrollments as $e): ?>
+                                <?php foreach ($enrollments as $e): 
+                                    // Check if certificate already issued
+                                    $certCheck = $pdo->prepare("SELECT id FROM certificates WHERE enrollment_id = ?");
+                                    $certCheck->execute([$e['id']]);
+                                    $certificate = $certCheck->fetch();
+                                ?>
                                 <tr>
                                     <td class="fw-bold"><?php echo $e['batch_name']; ?></td>
                                     <td><?php echo $e['course_name']; ?></td>
                                     <td><span class="badge bg-info bg-opacity-10 text-info rounded-pill text-capitalize"><?php echo $e['status']; ?></span></td>
                                     <td class="text-muted small"><?php echo date('d M Y', strtotime($e['enrollment_date'])); ?></td>
+                                    <td class="text-end">
+                                        <?php if ($certificate): ?>
+                                            <a href="../student/view_certificate.php?id=<?php echo $certificate['id']; ?>" target="_blank" class="btn btn-sm btn-outline-success rounded-pill px-3">
+                                                <i class="fas fa-eye me-1"></i> View Cert
+                                            </a>
+                                        <?php else: ?>
+                                            <a href="issue_certificate.php?enrollment_id=<?php echo $e['id']; ?>" class="btn btn-sm btn-primary rounded-pill px-3">
+                                                <i class="fas fa-certificate me-1"></i> Issue
+                                            </a>
+                                        <?php endif; ?>
+                                    </td>
                                 </tr>
                                 <?php endforeach; ?>
                             </tbody>

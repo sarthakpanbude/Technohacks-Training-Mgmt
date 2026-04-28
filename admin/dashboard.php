@@ -10,7 +10,6 @@ $activePage = "dashboard";
 $totalStudents = $pdo->query("SELECT COUNT(*) FROM students")->fetchColumn();
 $activeBatches = $pdo->query("SELECT COUNT(*) FROM batches WHERE status = 'active'")->fetchColumn();
 $totalCourses = $pdo->query("SELECT COUNT(*) FROM courses")->fetchColumn();
-$pendingTickets = $pdo->query("SELECT COUNT(*) FROM tickets WHERE status = 'open'")->fetchColumn();
 
 // Fetch Fee Stats
 $totalCollected = $pdo->query("SELECT SUM(amount) FROM invoices")->fetchColumn() ?: 0;
@@ -45,7 +44,7 @@ include '../includes/sidebar.php';
 
     <!-- Stats Grid -->
     <div class="row g-4 mb-4">
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="stat-card">
                 <div class="icon-box bg-primary bg-opacity-10 text-primary">
                     <i class="fas fa-user-graduate"></i>
@@ -54,7 +53,7 @@ include '../includes/sidebar.php';
                 <p class="text-muted small mb-0">Total Students</p>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="stat-card">
                 <div class="icon-box bg-success bg-opacity-10 text-success">
                     <i class="fas fa-layer-group"></i>
@@ -63,22 +62,13 @@ include '../includes/sidebar.php';
                 <p class="text-muted small mb-0">Active Batches</p>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="stat-card">
                 <div class="icon-box bg-info bg-opacity-10 text-info">
                     <i class="fas fa-book"></i>
                 </div>
                 <h3 class="fw-bold"><?php echo $totalCourses; ?></h3>
                 <p class="text-muted small mb-0">Total Courses</p>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="icon-box bg-warning bg-opacity-10 text-warning">
-                    <i class="fas fa-ticket-alt"></i>
-                </div>
-                <h3 class="fw-bold"><?php echo $pendingTickets; ?></h3>
-                <p class="text-muted small mb-0">Open Tickets</p>
             </div>
         </div>
     </div>
@@ -194,50 +184,6 @@ include '../includes/sidebar.php';
             </div>
         </div>
 
-        <!-- Upcoming Bootcamps -->
-        <div class="col-12 mt-4">
-            <div class="stat-card">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h5 class="fw-bold">Upcoming Workshops & Bootcamps</h5>
-                    <a href="#" class="text-decoration-none small fw-bold">View Calendar <i class="fas fa-chevron-right ms-1"></i></a>
-                </div>
-                <div class="row g-4">
-                    <div class="col-md-4">
-                        <div class="p-3 border rounded-4 bg-light bg-opacity-50">
-                            <div class="d-flex justify-content-between mb-3">
-                                <span class="badge bg-primary rounded-pill">12th May</span>
-                                <i class="fas fa-microchip text-primary"></i>
-                            </div>
-                            <h6 class="fw-bold">React.js Advanced Patterns</h6>
-                            <p class="text-muted small">Special bootcamp by industry experts on Hooks & Context API.</p>
-                            <button class="btn btn-sm btn-outline-primary w-100">Enroll Students</button>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="p-3 border rounded-4 bg-light bg-opacity-50">
-                            <div class="d-flex justify-content-between mb-3">
-                                <span class="badge bg-info rounded-pill">15th May</span>
-                                <i class="fas fa-database text-info"></i>
-                            </div>
-                            <h6 class="fw-bold">MySQL Query Optimization</h6>
-                            <p class="text-muted small">Optimizing large scale databases for ERP systems.</p>
-                            <button class="btn btn-sm btn-outline-info w-100">Notify Teachers</button>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="p-3 border rounded-4 bg-light bg-opacity-50">
-                            <div class="d-flex justify-content-between mb-3">
-                                <span class="badge bg-warning rounded-pill">20th May</span>
-                                <i class="fas fa-shield-alt text-warning"></i>
-                            </div>
-                            <h6 class="fw-bold">Cybersecurity Fundamentals</h6>
-                            <p class="text-muted small">Introduction to ethical hacking and network security.</p>
-                            <button class="btn btn-sm btn-outline-warning w-100">Manage Batch</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 </main>
 

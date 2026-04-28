@@ -12,25 +12,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $gender = $_POST['gender'];
     $age = $_POST['age'];
     $domain = $_POST['domain'];
-    
-    // Handle Photo Upload
-    $photo_path = "";
-    if (isset($_FILES['photo']) && $_FILES['photo']['error'] == 0) {
-        $target_dir = "assets/uploads/inquiries/";
-        if (!file_exists($target_dir)) mkdir($target_dir, 0777, true);
-        
-        $file_ext = pathinfo($_FILES["photo"]["name"], PATHINFO_EXTENSION);
-        $file_name = time() . "_" . preg_replace("/[^a-zA-Z0-9]/", "", $name) . "." . $file_ext;
-        $target_file = $target_dir . $file_name;
-        
-        if (move_uploaded_file($_FILES["photo"]["tmp_name"], $target_file)) {
-            $photo_path = $target_file;
-        }
-    }
+    $type = $_POST['type'];
+    $mode = $_POST['mode'];
 
     try {
-        $stmt = $pdo->prepare("INSERT INTO visitors (name, phone, email, gender, age, course_interest, photo, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'new')");
-        $stmt->execute([$name, $phone, $email, $gender, $age, $domain, $photo_path]);
+        $stmt = $pdo->prepare("INSERT INTO visitors (name, phone, email, gender, age, course_interest, type, mode, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'new')");
+        $stmt->execute([$name, $phone, $email, $gender, $age, $domain, $type, $mode]);
         $message = "Your inquiry has been submitted successfully! Our team will contact you soon.";
         $status = "success";
     } catch (PDOException $e) {
@@ -44,7 +31,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Inquiry Form | TechnoHacks Solutions</title>
+    <title>Course Inquiry Form | TechnoHacks Solutions</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="assets/css/style.css">
@@ -81,7 +68,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <div class="inquiry-card animate-fade-in">
         <div class="text-center mb-4">
             <img src="assets/img/logo.png" alt="Logo" style="max-height: 80px; margin-bottom: 1rem;">
-            <h3 class="fw-bold">Student Inquiry Form</h3>
+            <h3 class="fw-bold">Course Inquiry Form</h3>
             <p class="text-muted">Fill in your details to start your career with TechnoHacks.</p>
         </div>
 
@@ -131,19 +118,29 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     <label class="form-label small fw-bold">Select Domain</label>
                     <select name="domain" class="form-select" required>
                         <option value="">Choose your course interest...</option>
-                        <option value="Web Development">Web Development (Full Stack)</option>
-                        <option value="Data Science">Data Science & AI</option>
-                        <option value="Python Programming">Python Core & Advanced</option>
-                        <option value="Java Full Stack">Java Full Stack Development</option>
-                        <option value="Cyber Security">Cyber Security</option>
-                        <option value="UI/UX Design">UI/UX Design</option>
+                        <?php
+                        $courses_query = $pdo->query("SELECT name FROM courses ORDER BY name ASC");
+                        while($course = $courses_query->fetch()) {
+                            echo "<option value=\"".htmlspecialchars($course['name'])."\">".htmlspecialchars($course['name'])."</option>";
+                        }
+                        ?>
                     </select>
                 </div>
 
-                <div class="col-12">
-                    <label class="form-label small fw-bold">Profile Photo</label>
-                    <input type="file" name="photo" class="form-control" accept="image/*" required>
-                    <div class="form-text small">Please upload a professional passport-size photo.</div>
+                <div class="col-md-6">
+                    <label class="form-label small fw-bold">Inquiry Type</label>
+                    <select name="type" class="form-select" required>
+                        <option value="Course">Course Admission</option>
+                        <option value="Internship">Internship Program</option>
+                    </select>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label small fw-bold">Preferred Mode</label>
+                    <select name="mode" class="form-select" required>
+                        <option value="Online">Online (Virtual)</option>
+                        <option value="Offline">Offline (At Center)</option>
+                    </select>
                 </div>
 
                 <div class="col-12 mt-4">
