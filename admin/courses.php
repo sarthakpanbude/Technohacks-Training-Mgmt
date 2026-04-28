@@ -14,7 +14,7 @@ if (isset($_POST['add_course'])) {
     $fees = $_POST['fees'];
     $level = $_POST['level'];
 
-    $stmt = $pdo->prepare("INSERT INTO courses (name, description, duration, fees, level) VALUES (?, ?, ?, ?, ?)");
+    $stmt = $pdo->prepare("INSERT INTO courses (course_name, description, duration, fees, level) VALUES (?, ?, ?, ?, ?)");
     $stmt->execute([$name, $desc, $duration, $fees, $level]);
     header("Location: courses.php?msg=Course Added");
     exit;
@@ -49,7 +49,7 @@ include '../includes/sidebar.php';
                             </ul>
                         </div>
                     </div>
-                    <h5 class="fw-bold"><?php echo $c['name']; ?></h5>
+                    <h5 class="fw-bold"><?php echo $c['course_name']; ?></h5>
                     <p class="text-muted small"><?php echo substr($c['description'], 0, 80) . '...'; ?></p>
                     <div class="d-flex justify-content-between align-items-center mt-4">
                         <div>

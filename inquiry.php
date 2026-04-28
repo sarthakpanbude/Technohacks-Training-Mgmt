@@ -75,8 +75,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <?php if ($message): ?>
             <div class="alert alert-<?php echo $status; ?> border-0 shadow-sm mb-4">
                 <i class="fas fa-check-circle me-2"></i> <?php echo $message; ?>
-                <div class="mt-2">
-                    <a href="index.php" class="btn btn-sm btn-outline-<?php echo $status; ?>">Back to Login</a>
+                <div class="mt-2 d-flex gap-2">
+                    <a href="inquiry.php" class="btn btn-sm btn-<?php echo $status; ?> rounded-pill px-3">Submit Another</a>
+                    <a href="index.php" class="btn btn-sm btn-outline-<?php echo $status; ?> rounded-pill px-3">Back to Login</a>
                 </div>
             </div>
         <?php endif; ?>
@@ -119,9 +120,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     <select name="domain" class="form-select" required>
                         <option value="">Choose your course interest...</option>
                         <?php
-                        $courses_query = $pdo->query("SELECT name FROM courses ORDER BY name ASC");
+                        $courses_query = $pdo->query("SELECT course_name FROM courses ORDER BY course_name ASC");
                         while($course = $courses_query->fetch()) {
-                            echo "<option value=\"".htmlspecialchars($course['name'])."\">".htmlspecialchars($course['name'])."</option>";
+                            echo "<option value=\"".htmlspecialchars($course['course_name'])."\">".htmlspecialchars($course['course_name'])."</option>";
                         }
                         ?>
                     </select>

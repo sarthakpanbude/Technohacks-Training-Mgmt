@@ -17,47 +17,8 @@ if (isset($_POST['update_visitor_status'])) {
         $stmt = $pdo->prepare("UPDATE visitors SET status = ? WHERE id = ?");
         $stmt->execute([$status, $id]);
         
-        // If converted, create student account
-        if ($status == 'converted') {
-            $stmt = $pdo->prepare("SELECT * FROM visitors WHERE id = ?");
-            $stmt->execute([$id]);
-            $visitor = $stmt->fetch();
-            
-            if ($visitor) {
-                // Check if user already exists
-                $check = $pdo->prepare("SELECT id FROM users WHERE email = ?");
-                $check->execute([$visitor['email']]);
-                if (!$check->fetch()) {
-                    // Generate username from email (e.g. john.doe from john.doe@email.com)
-                    $username = strstr($visitor['email'], '@', true);
-                    if (!$username) $username = strtolower(preg_replace("/[^a-zA-Z0-9]/", "", $visitor['name']));
-                    
-                    // Ensure unique username
-                    $uCheck = $pdo->prepare("SELECT id FROM users WHERE username = ?");
-                    $uCheck->execute([$username]);
-                    if ($uCheck->fetch()) {
-                        $username .= rand(10, 99);
-                    }
-                    
-                    $password = password_hash('student123', PASSWORD_DEFAULT);
-                    
-                    // Insert into users
-                    $stmt = $pdo->prepare("INSERT INTO users (username, password, role, email, full_name) VALUES (?, ?, 'student', ?, ?)");
-                    $stmt->execute([$username, $password, $visitor['email'], $visitor['name']]);
-                    $user_id = $pdo->lastInsertId();
-                    
-                    // Insert into students
-                    $enrollment_no = 'TH' . date('Y') . str_pad($user_id, 4, '0', STR_PAD_LEFT);
-                    $referral_code = strtoupper(substr(md5($user_id . time()), 0, 6));
-                    
-                    $stmt = $pdo->prepare("INSERT INTO students (user_id, enrollment_no, phone, admission_status, referral_code) VALUES (?, ?, ?, 'enrolled', ?)");
-                    $stmt->execute([$user_id, $enrollment_no, $visitor['phone'], $referral_code]);
-                }
-            }
-        }
-        
         $pdo->commit();
-        header("Location: visitors.php?msg=Status Updated & Account Created");
+        header("Location: visitors.php?msg=Status Updated");
         exit;
     } catch (PDOException $e) {
         $pdo->rollBack();
@@ -158,7 +119,7 @@ include '../includes/sidebar.php';
                                         <form action="" method="POST" class="d-inline">
                                             <input type="hidden" name="visitor_id" value="<?php echo $v['id']; ?>">
                                             <?php if ($v['status'] == 'new'): ?>
-                                                <button type="submit" name="update_visitor_status" value="converted" class="btn btn-sm btn-success rounded-pill px-3">Converted to Admission</button>
+                                                <a href="admit.php?id=<?php echo $v['id']; ?>&new=1" class="btn btn-sm btn-success rounded-pill px-3">Admit</a>
                                                 <button type="submit" name="update_visitor_status" value="rejected" class="btn btn-sm btn-outline-danger rounded-pill px-3">Rejected</button>
                                             <?php else: ?>
                                                 <button type="button" class="btn btn-sm btn-light border rounded-pill px-3 disabled"><i class="fas fa-check-circle me-1 text-success"></i> Handled</button>
