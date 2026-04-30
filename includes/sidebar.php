@@ -13,10 +13,13 @@ $role = $_SESSION['role'];
             </a>
             
             <div class="sidebar-header small text-muted text-uppercase fw-bold mt-4 mb-2 px-3" style="font-size: 0.7rem; letter-spacing: 1px;">Admissions & Leads</div>
-            <a href="../admin/dashboard.php?page=inquiry" class="sidebar-link <?php echo $activePage == 'visitors' ? 'active' : ''; ?>">
+            <a href="../admin/inquiries.php" class="sidebar-link <?php echo $activePage == 'visitors' ? 'active' : ''; ?>">
                 <i class="fas fa-user-plus"></i> Inquiry Management
             </a>
             <a href="../admin/admissions.php" class="sidebar-link <?php echo $activePage == 'admissions' ? 'active' : ''; ?>">
+                <i class="fas fa-clipboard-check"></i> Admission Review
+            </a>
+            <a href="../admin/enrollment_review.php" class="sidebar-link <?php echo $activePage == 'enrollment_review' ? 'active' : ''; ?>">
                 <i class="fas fa-check-double"></i> Enrollment Review
             </a>
 

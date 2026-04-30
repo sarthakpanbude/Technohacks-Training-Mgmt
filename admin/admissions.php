@@ -3,104 +3,94 @@ require_once '../includes/auth.php';
 checkAuth('admin');
 require_once '../config/db.php';
 
+$activePage = 'admissions';
 $pageTitle = "Admission Management";
-$activePage = "admissions";
-
-// Handle Actions
-if (isset($_POST['action'])) {
-    $id = $_POST['student_id'];
-    $action = $_POST['action'];
-    $status = ($action == 'approve') ? 'approved' : 'rejected';
-    
-    $stmt = $pdo->prepare("UPDATE students SET admission_status = ? WHERE id = ?");
-    $stmt->execute([$status, $id]);
-    header("Location: admissions.php?msg=Application " . ucfirst($status));
-    exit;
-}
-
-// Fetch Pending Admissions
-$admissions = $pdo->query("SELECT s.*, u.full_name, u.email, u.created_at as applied_at FROM students s JOIN users u ON s.user_id = u.id WHERE s.admission_status = 'pending' ORDER BY u.created_at DESC")->fetchAll();
-
 include '../includes/header.php';
 include '../includes/sidebar.php';
+
+// Fetch inquiries pending review (Successfully Submitted)
+$stmt = $pdo->query("SELECT * FROM inquiries WHERE status = 'Successfully Submitted' ORDER BY id DESC");
+$pending_inquiries = $stmt->fetchAll();
+$pending_count = count($pending_inquiries);
 ?>
 
-<main class="main-content w-100">
+<main class="main-content w-100 p-4">
+    <?php include '../includes/topbar.php'; ?>
+
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2 class="fw-bold mb-0">Admission Management</h2>
-            <p class="text-muted">Review and process new student applications.</p>
+            <h3 class="fw-bold mb-0">Admission Management</h3>
+            <p class="text-muted small">Review and process new student applications.</p>
         </div>
-        <div class="badge bg-warning bg-opacity-10 text-warning px-3 py-2 rounded-pill fw-bold">
-            <i class="fas fa-clock me-1"></i> <?php echo count($admissions); ?> Pending Applications
+        <div class="badge bg-warning bg-opacity-10 text-warning px-3 py-2 rounded-pill">
+            <i class="fas fa-clock me-1"></i> <?php echo $pending_count; ?> Pending Applications
         </div>
     </div>
 
-    <div class="row g-4">
-        <?php if (empty($admissions)): ?>
-            <div class="col-12 text-center py-5">
-                <div class="stat-card bg-light border-0">
-                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
-                    <h5 class="fw-bold">All caught up!</h5>
-                    <p class="text-muted">No new admission forms to review at the moment.</p>
+    <?php if ($pending_count == 0): ?>
+        <!-- "All Caught Up" UI from user image -->
+        <div class="d-flex justify-content-center align-items-center" style="min-height: 400px;">
+            <div class="stat-card bg-white rounded-4 shadow-sm p-5 text-center border-0 w-75">
+                <div class="bg-success bg-opacity-10 text-success rounded-circle p-3 d-inline-block mb-4" style="width: 80px; height: 80px;">
+                    <i class="fas fa-check fa-2x mt-2"></i>
                 </div>
+                <h3 class="fw-bold mb-2">All caught up!</h3>
+                <p class="text-muted">No new admission forms to review at the moment.</p>
             </div>
-        <?php else: ?>
-            <?php foreach ($admissions as $a): ?>
-            <div class="col-md-6">
-                <div class="stat-card">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <div class="d-flex align-items-center">
-                            <div class="avatar me-3 bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 45px; height: 45px; font-weight: bold;">
-                                <?php echo strtoupper(substr($a['full_name'], 0, 2)); ?>
-                            </div>
-                            <div>
-                                <h6 class="mb-0 fw-bold"><?php echo $a['full_name']; ?></h6>
-                                <span class="small text-muted">Applied: <?php echo date('M d, H:i', strtotime($a['applied_at'])); ?></span>
-                            </div>
-                        </div>
-                        <span class="badge bg-warning text-dark small">New Form</span>
-                    </div>
-                    
-                    <div class="bg-light p-3 rounded-3 mb-3">
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <label class="small text-muted d-block">Email</label>
-                                <span class="small fw-bold"><?php echo $a['email']; ?></span>
-                            </div>
-                            <div class="col-6">
-                                <label class="small text-muted d-block">Phone</label>
-                                <span class="small fw-bold"><?php echo $a['phone'] ?: 'N/A'; ?></span>
-                            </div>
-                            <div class="col-12 mt-2">
-                                <label class="small text-muted d-block">Address</label>
-                                <span class="small"><?php echo $a['address'] ?: 'N/A'; ?></span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="d-flex gap-2">
-                        <form action="" method="POST" class="flex-grow-1">
-                            <input type="hidden" name="student_id" value="<?php echo $a['id']; ?>">
-                            <button type="submit" name="action" value="approve" class="btn btn-success btn-sm w-100 fw-bold">
-                                <i class="fas fa-check me-1"></i> Approve
-                            </button>
-                        </form>
-                        <form action="" method="POST" class="flex-grow-1">
-                            <input type="hidden" name="student_id" value="<?php echo $a['id']; ?>">
-                            <button type="submit" name="action" value="reject" class="btn btn-outline-danger btn-sm w-100 fw-bold">
-                                <i class="fas fa-times me-1"></i> Reject
-                            </button>
-                        </form>
-                        <a href="view_student.php?id=<?php echo $a['id']; ?>" class="btn btn-light btn-sm">
-                            <i class="fas fa-eye"></i>
-                        </a>
-                    </div>
-                </div>
+        </div>
+    <?php else: ?>
+        <div class="stat-card bg-white rounded-4 shadow-sm p-4 border-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="border-0 rounded-start">Student Details</th>
+                            <th class="border-0">Course</th>
+                            <th class="border-0">Date</th>
+                            <th class="border-0 text-center">Status</th>
+                            <th class="border-0 rounded-end text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach($pending_inquiries as $s): ?>
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-sm bg-primary bg-opacity-10 text-primary rounded-circle p-2 me-3">
+                                        <i class="fas fa-user-edit"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold"><?php echo $s['name']; ?></div>
+                                        <div class="text-muted small"><?php echo $s['mobile']; ?></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><span class="badge bg-info bg-opacity-10 text-info px-3 py-2 rounded-pill"><?php echo $s['course']; ?></span></td>
+                            <td><?php echo date('d M, Y', strtotime($s['created_at'])); ?></td>
+                            <td class="text-center">
+                                <span class="badge bg-success bg-opacity-10 text-success px-3 py-2 rounded-pill"><?php echo $s['status']; ?></span>
+                            </td>
+                            <td class="text-end">
+                                <div class="d-flex justify-content-end gap-2">
+                                    <a href="admit.php?id=<?php echo $s['id']; ?>" class="btn btn-sm btn-light border" title="Print Bill">
+                                        <i class="fas fa-file-invoice text-primary"></i>
+                                    </a>
+                                    <a href="mailto:?subject=Admission Inquiry&body=Hello <?php echo $s['name']; ?>..." class="btn btn-sm btn-light border" title="Share via Email">
+                                        <i class="fas fa-envelope text-danger"></i>
+                                    </a>
+                                    <a href="https://wa.me/<?php echo $s['mobile']; ?>?text=Hello <?php echo $s['name']; ?>..." target="_blank" class="btn btn-sm btn-light border" title="Share via WhatsApp">
+                                        <i class="fab fa-whatsapp text-success"></i>
+                                    </a>
+                                    <a href="admit.php?id=<?php echo $s['id']; ?>" class="btn btn-sm btn-primary px-3 rounded-pill">Admit Now</a>
+                                </div>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
             </div>
-            <?php endforeach; ?>
-        <?php endif; ?>
-    </div>
+        </div>
+    <?php endif; ?>
 </main>
 
 <?php include '../includes/footer.php'; ?>

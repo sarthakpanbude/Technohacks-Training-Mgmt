@@ -17,7 +17,7 @@ if (isset($_POST['update_status'])) {
 }
 
 // Fetch Students
-$students = $pdo->query("SELECT s.*, u.full_name, u.email FROM students s JOIN users u ON s.user_id = u.id ORDER BY s.created_at DESC")->fetchAll();
+$students = $pdo->query("SELECT s.*, COALESCE(u.full_name, s.name) as display_name, u.email, b.batch_name FROM students s LEFT JOIN users u ON s.user_id = u.id LEFT JOIN batches b ON s.batch_id = b.id ORDER BY s.created_at DESC")->fetchAll();
 
 include '../includes/header.php';
 include '../includes/sidebar.php';
@@ -37,6 +37,7 @@ include '../includes/sidebar.php';
                         <th class="border-0">Enrollment #</th>
                         <th class="border-0">Name</th>
                         <th class="border-0">Email</th>
+                        <th class="border-0">Batch</th>
                         <th class="border-0">Status</th>
                         <th class="border-0">Action</th>
                     </tr>
@@ -48,17 +49,22 @@ include '../includes/sidebar.php';
                         <?php foreach ($students as $s): ?>
                         <tr>
                             <td class="fw-bold"><?php echo $s['enrollment_no'] ?? 'N/A'; ?></td>
-                            <td><?php echo $s['full_name']; ?></td>
-                            <td class="text-muted small"><?php echo $s['email']; ?></td>
+                            <td><?php echo htmlspecialchars($s['display_name']); ?></td>
+                            <td class="text-muted small"><?php echo htmlspecialchars($s['email'] ?? 'No Account'); ?></td>
+                            <td class="small fw-bold <?php echo $s['batch_name'] ? 'text-primary' : 'text-muted'; ?>">
+                                <?php echo $s['batch_name'] ?: 'Not Assigned'; ?>
+                            </td>
                             <td>
                                 <?php 
                                 $badgeClass = 'bg-secondary';
-                                if ($s['admission_status'] == 'active' || $s['admission_status'] == 'enrolled') $badgeClass = 'bg-primary';
-                                if ($s['admission_status'] == 'approved' || $s['admission_status'] == 'placed') $badgeClass = 'bg-success';
-                                if ($s['admission_status'] == 'pending') $badgeClass = 'bg-warning text-dark';
+                                $statusText = $s['admission_status'];
+                                
+                                if ($s['admission_status'] == 'pending') { $badgeClass = 'bg-warning'; $statusText = 'Pending'; }
+                                elseif ($s['admission_status'] == 'admitted') { $badgeClass = 'bg-primary'; $statusText = 'Admitted'; }
+                                elseif ($s['admission_status'] == 'active' || $s['admission_status'] == 'enrolled') { $badgeClass = 'bg-success'; $statusText = 'Active'; }
                                 ?>
                                 <span class="badge <?php echo $badgeClass; ?> bg-opacity-10 text-<?php echo str_replace('bg-', '', $badgeClass); ?> rounded-pill text-capitalize">
-                                    <?php echo $s['admission_status']; ?>
+                                    <?php echo $statusText; ?>
                                 </span>
                             </td>
                             <td>

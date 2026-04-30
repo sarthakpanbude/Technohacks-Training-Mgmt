@@ -46,15 +46,34 @@ if (!$s) exit("Not found");
             <tr><td><strong>Payment Mode:</strong></td><td class="text-end"><?php echo $s['payment_mode']; ?></td></tr>
             <tr><td colspan="2"><hr></td></tr>
             <tr class="table-light"><td><strong>Pending Balance:</strong></td><td class="text-end text-danger fw-bold">₹<?php echo number_format($s['pending_fee'], 2); ?></td></tr>
-            <tr><td><strong>Next Installment:</strong></td><td class="text-end"><?php echo $s['next_installment_date'] ? date('d M, Y', strtotime($s['next_installment_date'])) : 'N/A'; ?></td></tr>
+            
+            <?php if ($s['next_installment_amount'] > 0): ?>
+            <tr><td><strong>2nd Installment:</strong></td><td class="text-end fw-bold">₹<?php echo number_format($s['next_installment_amount'], 2); ?></td></tr>
+            <tr><td><small>Due Date:</small></td><td class="text-end small text-muted"><?php echo $s['next_installment_date'] ? date('d M, Y', strtotime($s['next_installment_date'])) : 'N/A'; ?></td></tr>
+            <?php endif; ?>
+
+            <?php if ($s['third_installment_amount'] > 0): ?>
+            <tr><td><strong>3rd Installment:</strong></td><td class="text-end fw-bold">₹<?php echo number_format($s['third_installment_amount'], 2); ?></td></tr>
+            <tr><td><small>Due Date:</small></td><td class="text-end small text-muted"><?php echo $s['third_installment_date'] ? date('d M, Y', strtotime($s['third_installment_date'])) : 'N/A'; ?></td></tr>
+            <?php endif; ?>
         </table>
         
-        <div class="mt-4 d-flex justify-content-between align-items-end">
-            <div class="stamp">PAID</div>
-            <div class="text-center">
-                <p class="mb-0 small">Authorized Signatory</p>
-                <div style="border-top: 1px solid #333; width: 150px; margin-top: 40px;"></div>
-                <p class="small fw-bold">CEO, TechnoHacks</p>
+        <div class="mt-5 d-flex justify-content-between align-items-end">
+            <div class="text-start">
+                <p class="mb-1 small text-muted">Warm regards,</p>
+                <div class="mt-2 mb-1">
+                    <img src="../assets/img/signature.png" alt="Signature" style="max-height: 50px; display: block;" onerror="this.style.display='none'">
+                    <div style="width: 150px; border-bottom: 1px solid #333; margin-bottom: 5px;" class="no-print-border"></div>
+                </div>
+                <h6 class="fw-bold mb-0" style="font-size: 1.1rem;">Sandip Gavit</h6>
+                <p class="small mb-0 text-muted">Founder & CEO</p>
+                <p class="small mb-0 text-muted">TechnoHacks Solutions Pvt. Ltd.</p>
+            </div>
+            <div class="text-center position-relative">
+                <div class="company-stamp">
+                    <img src="../assets/img/stamp.png" alt="Stamp" style="max-height: 100px; opacity: 0.8;" onerror="this.style.display='none'">
+                    <div class="stamp-placeholder no-print" style="width: 100px; height: 100px; border: 2px dashed #ccc; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #ccc;">STAMP HERE</div>
+                </div>
             </div>
         </div>
         

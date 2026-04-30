@@ -37,6 +37,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $stmt = $pdo->prepare("INSERT INTO students (user_id, enrollment_no, dob, phone, address, referral_code, admission_status) VALUES (?, ?, ?, ?, ?, ?, 'enrolled')");
                 $stmt->execute([$user_id, $enrollment_no, $dob, $phone, $address, $referral_code]);
 
+                // Handle Photo Upload
+                if (isset($_FILES['photo']) && $_FILES['photo']['error'] == 0) {
+                    $uploadDir = '../uploads/students/';
+                    if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
+                    
+                    $photoName = time() . '_photo_' . $_FILES['photo']['name'];
+                    if (move_uploaded_file($_FILES['photo']['tmp_name'], $uploadDir . $photoName)) {
+                        $photoPath = 'uploads/students/' . $photoName;
+                        $stmt = $pdo->prepare("INSERT INTO student_documents (student_id, doc_type, file_path) VALUES (?, 'photo', ?)");
+                        $stmt->execute([$enrollment_no, $photoPath]);
+                    }
+                }
+
                 $pdo->commit();
                 header("Location: students.php?msg=Student Added Successfully");
                 exit;
@@ -68,7 +81,7 @@ include '../includes/sidebar.php';
     <?php endif; ?>
 
     <div class="stat-card">
-        <form method="POST">
+        <form method="POST" enctype="multipart/form-data">
             <div class="row g-3">
                 <div class="col-md-6">
                     <label class="form-label small fw-bold">Full Name *</label>
@@ -86,13 +99,17 @@ include '../includes/sidebar.php';
                     <label class="form-label small fw-bold">Password *</label>
                     <input type="password" name="password" class="form-control" required minlength="6">
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <label class="form-label small fw-bold">Phone</label>
                     <input type="text" name="phone" class="form-control" value="<?php echo htmlspecialchars($_POST['phone'] ?? ''); ?>">
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <label class="form-label small fw-bold">Date of Birth</label>
                     <input type="date" name="dob" class="form-control" value="<?php echo $_POST['dob'] ?? ''; ?>">
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label small fw-bold">Passport Photo</label>
+                    <input type="file" name="photo" class="form-control" accept="image/*">
                 </div>
                 <div class="col-12">
                     <label class="form-label small fw-bold">Address</label>

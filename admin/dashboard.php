@@ -25,7 +25,6 @@ while($row = $enrollmentQuery->fetch()) {
 }
 $chartData = json_encode(array_values($monthlyEnrollments));
 
-<<<<<<< HEAD
 $page = $_GET['page'] ?? 'dashboard';
 if ($page == 'inquiry' || $page == 'add_inquiry') $activePage = 'visitors';
 
@@ -36,10 +35,9 @@ if (isset($_POST['add_manual_inquiry'])) {
     header("Location: dashboard.php?page=inquiry&msg=Inquiry Added");
     exit;
 }
-=======
-// Fetch Recent Inquiries
+
+// Fetch Recent Inquiries (Merged from remote)
 $recentInquiries = $pdo->query("SELECT * FROM visitors ORDER BY created_at DESC LIMIT 5")->fetchAll();
->>>>>>> fe0aadba8f1b094d6d1e3de8cbb6757092c184b4
 
 include '../includes/header.php';
 include '../includes/sidebar.php';
@@ -173,27 +171,46 @@ include '../includes/sidebar.php';
                     <tbody>
                         <?php
                         $search = $_GET['search'] ?? '';
-                        $query = "SELECT * FROM visitors WHERE status != 'rejected'";
-                        $params = [];
+                        
+                        // Unified Query for Dashboard
+                        $q1 = "SELECT id, name, mobile as phone, course, created_at, 'inquiry' as source FROM inquiries WHERE status NOT IN ('admitted', 'deleted')";
+                        $q2 = "SELECT id, name, phone, course_interest as course, created_at, 'visitor' as source FROM visitors WHERE status NOT IN ('converted', 'rejected')";
+                        
                         if ($search) {
-                            $query .= " AND (name LIKE ? OR phone LIKE ? OR course_interest LIKE ?)";
-                            $params = ["%$search%", "%$search%", "%$search%"];
+                            $q1 .= " AND (name LIKE ? OR mobile LIKE ? OR course LIKE ?)";
+                            $q2 .= " AND (name LIKE ? OR phone LIKE ? OR course_interest LIKE ?)";
+                            $params = ["%$search%", "%$search%", "%$search%", "%$search%", "%$search%", "%$search%"];
+                        } else {
+                            $params = [];
                         }
-                        $query .= " ORDER BY created_at DESC";
-                        $inquiries = $pdo->prepare($query);
-                        $inquiries->execute($params);
-                        foreach ($inquiries->fetchAll() as $inq):
+
+                        $inqs_data = $pdo->prepare($q1);
+                        $inqs_data->execute(array_slice($params, 0, 3));
+                        $res1 = $inqs_data->fetchAll();
+
+                        $vis_data = $pdo->prepare($q2);
+                        $vis_data->execute(array_slice($params, 3, 3));
+                        $res2 = $vis_data->fetchAll();
+
+                        $combined = array_merge($res1, $res2);
+                        usort($combined, function($a, $b) { return strtotime($b['created_at']) - strtotime($a['created_at']); });
+
+                        foreach ($combined as $inq):
                         ?>
                         <tr>
-                            <td class="px-4 fw-bold"><?php echo $inq['name']; ?></td>
-                            <td><?php echo $inq['phone']; ?></td>
-                            <td><span class="badge bg-info bg-opacity-10 text-info rounded-pill px-3"><?php echo $inq['course_interest']; ?></span></td>
+                            <td class="px-4 fw-bold">
+                                <?php echo htmlspecialchars($inq['name']); ?>
+                                <br><small class="text-muted" style="font-size: 0.6rem;"><?php echo strtoupper($inq['source']); ?></small>
+                            </td>
+                            <td><?php echo htmlspecialchars($inq['phone']); ?></td>
+                            <td><span class="badge bg-info bg-opacity-10 text-info rounded-pill px-3"><?php echo htmlspecialchars($inq['course']); ?></span></td>
                             <td class="small text-muted"><?php echo date('d M, Y', strtotime($inq['created_at'])); ?></td>
                             <td class="text-end px-4">
-                                <a href="admit.php?id=<?php echo $inq['id']; ?>&new=1" class="btn btn-sm btn-success rounded-pill px-3">Admit</a>
+                                <a href="admit.php?id=<?php echo $inq['id']; ?>&source=<?php echo $inq['source']; ?>&new=1" class="btn btn-sm btn-success rounded-pill px-3">Admit</a>
                             </td>
                         </tr>
                         <?php endforeach; ?>
+
                     </tbody>
                 </table>
             </div>
@@ -262,140 +279,6 @@ include '../includes/sidebar.php';
             </form>
         </div>
     <?php endif; ?>
-<<<<<<< HEAD
-=======
-
-    <!-- Stats Grid -->
-    <div class="row g-4 mb-4">
-        <div class="col-md-4">
-            <div class="stat-card">
-                <div class="icon-box bg-primary bg-opacity-10 text-primary">
-                    <i class="fas fa-user-graduate"></i>
-                </div>
-                <h3 class="fw-bold"><?php echo $totalStudents; ?></h3>
-                <p class="text-muted small mb-0">Total Students</p>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="stat-card">
-                <div class="icon-box bg-success bg-opacity-10 text-success">
-                    <i class="fas fa-layer-group"></i>
-                </div>
-                <h3 class="fw-bold"><?php echo $activeBatches; ?></h3>
-                <p class="text-muted small mb-0">Active Batches</p>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="stat-card">
-                <div class="icon-box bg-info bg-opacity-10 text-info">
-                    <i class="fas fa-book"></i>
-                </div>
-                <h3 class="fw-bold"><?php echo $totalCourses; ?></h3>
-                <p class="text-muted small mb-0">Total Courses</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Financial Overview Grid -->
-    <h5 class="fw-bold mb-3">Financial Overview</h5>
-    <div class="row g-4 mb-4">
-        <div class="col-md-3">
-            <div class="stat-card border-bottom border-success border-3">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <p class="text-muted small fw-bold mb-0 text-uppercase">Collected Fees</p>
-                    <i class="fas fa-rupee-sign text-success"></i>
-                </div>
-                <h4 class="fw-bold mb-0">₹<?php echo number_format($totalCollected, 2); ?></h4>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card border-bottom border-warning border-3">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <p class="text-muted small fw-bold mb-0 text-uppercase">Pending Fees</p>
-                    <i class="fas fa-hourglass-half text-warning"></i>
-                </div>
-                <h4 class="fw-bold mb-0">₹<?php echo number_format($totalPendingAmt, 2); ?></h4>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card border-bottom border-danger border-3">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <p class="text-muted small fw-bold mb-0 text-uppercase">Overdue Count</p>
-                    <i class="fas fa-exclamation-circle text-danger"></i>
-                </div>
-                <h4 class="fw-bold mb-0"><?php echo $overdueCount; ?></h4>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card border-bottom border-primary border-3">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <p class="text-muted small fw-bold mb-0 text-uppercase">Today's Txns</p>
-                    <i class="fas fa-exchange-alt text-primary"></i>
-                </div>
-                <h4 class="fw-bold mb-0"><?php echo $recentTransactions; ?></h4>
-            </div>
-        </div>
-    </div>
-
-    <!-- IT Institute Specific Sections -->
-    <div class="row g-4">
-        <!-- Placement & Trends -->
-        <div class="col-md-8">
-            <div class="stat-card h-100">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h5 class="fw-bold">Enrollment Trends</h5>
-                    <div class="dropdown">
-                        <button class="btn btn-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">2024</button>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#">2024</a></li>
-                            <li><a class="dropdown-item" href="#">2023</a></li>
-                        </ul>
-                    </div>
-                </div>
-                <div style="height: 300px; position: relative;">
-                    <canvas id="enrollmentChart"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <!-- Recent Inquiries -->
-        <div class="col-md-4">
-            <div class="stat-card h-100">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h5 class="fw-bold">Recent Inquiries</h5>
-                    <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3">New</span>
-                </div>
-                <div class="list-group list-group-flush">
-                    <?php if (empty($recentInquiries)): ?>
-                        <div class="text-center py-4 text-muted small">No recent inquiries.</div>
-                    <?php else: ?>
-                        <?php foreach ($recentInquiries as $inq): ?>
-                        <div class="list-group-item px-0 py-3 bg-transparent border-bottom">
-                            <div class="d-flex align-items-center">
-                                <div class="avatar me-3 bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 40px; height: 40px; font-size: 0.8rem;">
-                                    <?php 
-                                        $names = explode(' ', $inq['name']);
-                                        echo strtoupper(substr($names[0], 0, 1) . (isset($names[1]) ? substr($names[1], 0, 1) : ''));
-                                    ?>
-                                </div>
-                                <div class="flex-grow-1">
-                                    <h6 class="mb-0 fw-bold small"><?php echo htmlspecialchars($inq['name']); ?></h6>
-                                    <p class="text-muted extra-small mb-0"><?php echo htmlspecialchars($inq['course_interest']); ?></p>
-                                </div>
-                                <div class="ms-auto text-end">
-                                    <span class="text-muted extra-small"><?php echo date('d M', strtotime($inq['created_at'])); ?></span>
-                                </div>
-                            </div>
-                        </div>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </div>
-                <a href="visitors.php" class="btn btn-primary-light w-100 mt-3 fw-bold py-2 border-0 small" style="color: var(--primary);">View All Inquiries</a>
-            </div>
-        </div>
-
-    </div>
->>>>>>> fe0aadba8f1b094d6d1e3de8cbb6757092c184b4
 </main>
 
 <script>

@@ -7,7 +7,7 @@ $pageTitle = "Student Profile";
 $activePage = "students";
 
 $id = $_GET['id'] ?? 0;
-$student = $pdo->prepare("SELECT s.*, u.full_name, u.email, u.created_at as joined_at FROM students s JOIN users u ON s.user_id = u.id WHERE s.id = ?");
+$student = $pdo->prepare("SELECT s.*, COALESCE(u.full_name, s.name) as display_name, u.email, u.created_at as joined_at FROM students s LEFT JOIN users u ON s.user_id = u.id WHERE s.id = ?");
 $student->execute([$id]);
 $student = $student->fetch();
 
@@ -35,10 +35,15 @@ include '../includes/sidebar.php';
 <main class="main-content w-100">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2 class="fw-bold mb-0"><?php echo $student['full_name']; ?></h2>
+            <h2 class="fw-bold mb-0"><?php echo htmlspecialchars($student['display_name']); ?></h2>
             <p class="text-muted mb-0">Enrollment: <?php echo $student['enrollment_no'] ?? 'N/A'; ?></p>
         </div>
-        <a href="students.php" class="btn btn-outline-secondary"><i class="fas fa-arrow-left me-2"></i>Back</a>
+        <div>
+            <?php if (!empty($student['enrollment_no'])): ?>
+                <a href="generate_form.php?id=<?php echo urlencode($student['enrollment_no']); ?>" target="_blank" class="btn btn-outline-primary me-2"><i class="fas fa-file-alt me-2"></i>Print Form</a>
+            <?php endif; ?>
+            <a href="students.php" class="btn btn-outline-secondary"><i class="fas fa-arrow-left me-2"></i>Back</a>
+        </div>
     </div>
 
     <div class="row g-4">
@@ -49,24 +54,28 @@ include '../includes/sidebar.php';
                     <div class="avatar mx-auto bg-primary text-white rounded-circle d-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px; font-size: 2rem; font-weight: bold;">
                         <?php echo strtoupper(substr($student['full_name'], 0, 2)); ?>
                     </div>
-                    <h5 class="fw-bold mb-1"><?php echo $student['full_name']; ?></h5>
+                    <h5 class="fw-bold mb-1"><?php echo htmlspecialchars($student['display_name']); ?></h5>
                     <?php
                     $statusColor = 'secondary';
-                    if (in_array($student['admission_status'], ['enrolled', 'active'])) $statusColor = 'primary';
-                    if (in_array($student['admission_status'], ['approved', 'placed'])) $statusColor = 'success';
-                    if ($student['admission_status'] == 'pending') $statusColor = 'warning';
+                    $statusText = $student['admission_status'];
+                    if ($student['admission_status'] == 'pending') { $statusColor = 'warning'; $statusText = 'Pending'; }
+                    elseif ($student['admission_status'] == 'admitted') { $statusColor = 'primary'; $statusText = 'Admitted'; }
+                    elseif (in_array($student['admission_status'], ['enrolled', 'active'])) { $statusColor = 'success'; $statusText = 'Active Student'; }
                     ?>
-                    <span class="badge bg-<?php echo $statusColor; ?> bg-opacity-10 text-<?php echo $statusColor; ?> rounded-pill text-capitalize">
-                        <?php echo $student['admission_status']; ?>
-                    </span>
+                    <div class="mb-2">
+                        <small class="text-muted d-block fw-bold text-uppercase" style="font-size: 0.65rem;">Registration Status</small>
+                        <span class="badge bg-<?php echo $statusColor; ?> bg-opacity-10 text-<?php echo $statusColor; ?> rounded-pill text-capitalize px-3">
+                            <?php echo $statusText; ?>
+                        </span>
+                    </div>
                 </div>
                 <hr>
-                <div class="mb-2"><i class="fas fa-envelope text-muted me-2"></i><?php echo $student['email']; ?></div>
+                <div class="mb-2"><i class="fas fa-envelope text-muted me-2"></i><?php echo $student['email'] ?? 'No Account'; ?></div>
                 <div class="mb-2"><i class="fas fa-phone text-muted me-2"></i><?php echo $student['phone'] ?: 'N/A'; ?></div>
                 <div class="mb-2"><i class="fas fa-birthday-cake text-muted me-2"></i><?php echo $student['dob'] ? date('d M Y', strtotime($student['dob'])) : 'N/A'; ?></div>
                 <div class="mb-2"><i class="fas fa-map-marker-alt text-muted me-2"></i><?php echo $student['address'] ?: 'N/A'; ?></div>
                 <div class="mb-2"><i class="fas fa-share-alt text-muted me-2"></i>Referral: <code><?php echo $student['referral_code'] ?? 'N/A'; ?></code></div>
-                <div class="mb-0"><i class="fas fa-calendar text-muted me-2"></i>Joined: <?php echo date('d M Y', strtotime($student['joined_at'])); ?></div>
+                <div class="mb-0"><i class="fas fa-calendar text-muted me-2"></i>Joined: <?php echo $student['joined_at'] ? date('d M Y', strtotime($student['joined_at'])) : date('d M Y', strtotime($student['created_at'])); ?></div>
             </div>
         </div>
 

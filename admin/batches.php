@@ -8,7 +8,7 @@ $activePage = "batches";
 
 // Fetch Teachers & Courses for dropdowns
 $teachers = $pdo->query("SELECT t.id, u.full_name FROM teachers t JOIN users u ON t.user_id = u.id")->fetchAll();
-$courses = $pdo->query("SELECT id, name FROM courses")->fetchAll();
+$courses = $pdo->query("SELECT id, course_name FROM courses")->fetchAll();
 
 // Handle Add Batch
 if (isset($_POST['add_batch'])) {
@@ -16,16 +16,17 @@ if (isset($_POST['add_batch'])) {
     $teacher_id = $_POST['teacher_id'];
     $name = $_POST['batch_name'];
     $schedule = $_POST['schedule'];
+    $start_time = $_POST['start_time'] ?? '';
     $capacity = $_POST['capacity'];
     $start_date = $_POST['start_date'];
 
-    $stmt = $pdo->prepare("INSERT INTO batches (course_id, teacher_id, batch_name, schedule, capacity, start_date) VALUES (?, ?, ?, ?, ?, ?)");
-    $stmt->execute([$course_id, $teacher_id, $name, $schedule, $capacity, $start_date]);
+    $stmt = $pdo->prepare("INSERT INTO batches (course_id, teacher_id, batch_name, schedule, start_time, capacity, start_date) VALUES (?, ?, ?, ?, ?, ?, ?)");
+    $stmt->execute([$course_id, $teacher_id, $name, $schedule, $start_time, $capacity, $start_date]);
     header("Location: batches.php?msg=Batch Created");
     exit;
 }
 
-$batches = $pdo->query("SELECT b.*, c.name as course_name, u.full_name as teacher_name FROM batches b JOIN courses c ON b.course_id = c.id JOIN teachers t ON b.teacher_id = t.id JOIN users u ON t.user_id = u.id ORDER BY b.id DESC")->fetchAll();
+$batches = $pdo->query("SELECT b.*, c.course_name, u.full_name as teacher_name FROM batches b JOIN courses c ON b.course_id = c.id JOIN teachers t ON b.teacher_id = t.id JOIN users u ON t.user_id = u.id ORDER BY b.id DESC")->fetchAll();
 
 include '../includes/header.php';
 include '../includes/sidebar.php';
@@ -46,6 +47,7 @@ include '../includes/sidebar.php';
                         <th class="border-0">Course</th>
                         <th class="border-0">Teacher</th>
                         <th class="border-0">Schedule</th>
+                        <th class="border-0">Timing</th>
                         <th class="border-0">Capacity</th>
                         <th class="border-0">Status</th>
                     </tr>
@@ -53,6 +55,7 @@ include '../includes/sidebar.php';
                 <tbody>
                     <?php if (empty($batches)): ?>
                         <tr><td colspan="6" class="text-center py-4 text-muted">No batches created yet.</td></tr>
+                        <tr><td colspan="7" class="text-center py-4 text-muted">No batches created yet.</td></tr>
                     <?php else: ?>
                         <?php foreach ($batches as $b): ?>
                         <tr>
@@ -60,6 +63,7 @@ include '../includes/sidebar.php';
                             <td><?php echo $b['course_name']; ?></td>
                             <td><?php echo $b['teacher_name']; ?></td>
                             <td><?php echo $b['schedule']; ?></td>
+                            <td><?php echo $b['start_time'] ?: 'N/A'; ?></td>
                             <td>
                                 <div class="progress" style="height: 6px; width: 100px;">
                                     <div class="progress-bar" style="width: 20%;"></div>
@@ -91,7 +95,7 @@ include '../includes/sidebar.php';
                             <label class="form-label small fw-bold">Select Course</label>
                             <select name="course_id" class="form-select" required>
                                 <?php foreach ($courses as $c): ?>
-                                    <option value="<?php echo $c['id']; ?>"><?php echo $c['name']; ?></option>
+                                    <option value="<?php echo $c['id']; ?>"><?php echo $c['course_name']; ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -108,11 +112,15 @@ include '../includes/sidebar.php';
                             <input type="text" name="batch_name" class="form-control" required>
                         </div>
                         <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label small fw-bold">Schedule (e.g. Mon-Fri 10AM)</label>
-                                <input type="text" name="schedule" class="form-control" required>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label small fw-bold">Days (e.g. Mon-Fri)</label>
+                                <input type="text" name="schedule" class="form-control" placeholder="Mon-Fri" required>
                             </div>
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label small fw-bold">Timing (e.g. 10AM)</label>
+                                <input type="text" name="start_time" class="form-control" placeholder="10:00 AM" required>
+                            </div>
+                            <div class="col-md-4 mb-3">
                                 <label class="form-label small fw-bold">Capacity</label>
                                 <input type="number" name="capacity" class="form-control" required>
                             </div>

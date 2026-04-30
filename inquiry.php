@@ -16,8 +16,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $mode = $_POST['mode'];
 
     try {
-        $stmt = $pdo->prepare("INSERT INTO visitors (name, phone, email, gender, age, course_interest, type, mode, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'new')");
-        $stmt->execute([$name, $phone, $email, $gender, $age, $domain, $type, $mode]);
+        $stmt = $pdo->prepare("INSERT INTO inquiries (name, mobile, course, message, status) VALUES (?, ?, ?, ?, 'Successfully Submitted')");
+        $stmt->execute([$name, $phone, $domain, "Inquiry for $type ($mode) - Age: $age, Gender: $gender, Email: $email"]);
         $message = "Your inquiry has been submitted successfully! Our team will contact you soon.";
         $status = "success";
     } catch (PDOException $e) {

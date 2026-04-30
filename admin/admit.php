@@ -12,13 +12,23 @@ if (!$inquiry_id) {
     exit;
 }
 
-// Fetch Inquiry Data
-$stmt = $pdo->prepare("SELECT * FROM visitors WHERE id = ?");
+// Fetch Inquiry Data (Try inquiries first, then visitors)
+$stmt = $pdo->prepare("SELECT * FROM inquiries WHERE id = ?");
 $stmt->execute([$inquiry_id]);
 $inquiry = $stmt->fetch();
 
 if (!$inquiry) {
-    header("Location: visitors.php");
+    $stmt = $pdo->prepare("SELECT * FROM visitors WHERE id = ?");
+    $stmt->execute([$inquiry_id]);
+    $inquiry = $stmt->fetch();
+    if ($inquiry) {
+        $inquiry['course'] = $inquiry['course_interest'];
+        $inquiry['mobile'] = $inquiry['phone'];
+    }
+}
+
+if (!$inquiry) {
+    header("Location: inquiries.php?error=Inquiry not found");
     exit;
 }
 
@@ -31,16 +41,33 @@ if (!isset($_SESSION['admission_data']) || (isset($_GET['new']) && $_GET['new'] 
     $_SESSION['admission_data'] = [
         'inquiry_id' => $inquiry_id,
         'full_name' => $inquiry['name'],
-        'email' => $inquiry['email'],
-        'mobile' => $inquiry['phone'],
-        'course' => $inquiry['course_interest'],
-        'college' => '', // Will be filled in education
+        'email' => $inquiry['email'] ?? '',
+        'mobile' => $inquiry['mobile'] ?? $inquiry['phone'] ?? '',
+        'course' => $inquiry['course'] ?? $inquiry['course_interest'] ?? '',
+        'college' => '', 
     ];
 }
 
 // Handle Form Submissions for each step
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_POST['next_step'])) {
+        // File Upload Handling for Step 4
+        if ($step == 4 && isset($_FILES['photo'])) {
+            $uploadDir = '../uploads/students/';
+            if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
+            
+            if (!empty($_FILES['photo']['name'])) {
+                $photoName = time() . '_photo_' . $_FILES['photo']['name'];
+                move_uploaded_file($_FILES['photo']['tmp_name'], $uploadDir . $photoName);
+                $_SESSION['uploaded_files']['photo'] = 'uploads/students/' . $photoName;
+            }
+            if (!empty($_FILES['id_proof']['name'])) {
+                $idName = time() . '_id_' . $_FILES['id_proof']['name'];
+                move_uploaded_file($_FILES['id_proof']['tmp_name'], $uploadDir . $idName);
+                $_SESSION['uploaded_files']['id_proof'] = 'uploads/students/' . $idName;
+            }
+        }
+
         foreach ($_POST as $key => $value) {
             if ($key != 'next_step') {
                 $_SESSION['admission_data'][$key] = $value;
@@ -77,8 +104,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $stmt->execute([$student_id, $data['full_name'], $data['father_name'], $data['mother_name'], $data['dob'], $data['gender'], $data['email'], $data['course']]);
 
             // 2. Save Personal Details
-            $stmt = $pdo->prepare("INSERT INTO personal_details (student_id, category, caste, domicile, nationality, religion, address) VALUES (?, ?, ?, ?, ?, ?, ?)");
-            $stmt->execute([$student_id, $data['category'], $data['caste'], $data['domicile'], $data['nationality'], $data['religion'], $data['address']]);
+            $stmt = $pdo->prepare("INSERT INTO personal_details (student_id, category, nationality, address, permanent_address, city, state, aadhaar_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$student_id, $data['category'], $data['nationality'], $data['address'], $data['permanent_address'], $data['city'], $data['state'], $data['aadhaar_number']]);
 
             // 3. Save Education
             $stmt = $pdo->prepare("INSERT INTO education (student_id, qualification, college_name, passing_year, status) VALUES (?, ?, ?, ?, ?)");
@@ -94,15 +121,34 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             }
 
             // 5. Save Fees
-            $stmt = $pdo->prepare("INSERT INTO student_fees (student_id, total_fee, paid_fee, pending_fee, installments, next_installment_date, payment_mode) VALUES (?, ?, ?, ?, ?, ?, ?)");
-            $stmt->execute([$student_id, $data['total_fee'], $data['paid_fee'], $data['pending_fee'], $data['installments'], $data['next_date'], $data['payment_mode']]);
+            $stmt = $pdo->prepare("INSERT INTO student_fees (student_id, total_fee, paid_fee, pending_fee, installments, next_installment_amount, next_installment_date, third_installment_amount, third_installment_date, payment_mode) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([
+                $student_id, 
+                $data['total_fee'], 
+                $data['paid_fee'], 
+                $data['pending_fee'], 
+                $data['installments'], 
+                $data['next_installment_amount'] ?? 0,
+                $data['next_installment_date'] ?: null, 
+                $data['third_installment_amount'] ?? 0,
+                $data['third_installment_date'] ?: null,
+                $data['payment_mode']
+            ]);
 
-            // 6. Create User Account
-            $username = strtolower($student_id);
-            $password = password_hash($data['mobile'], PASSWORD_DEFAULT);
-            $stmt = $pdo->prepare("INSERT INTO users (username, password, role, email, full_name) VALUES (?, ?, 'student', ?, ?)");
-            $stmt->execute([$username, $password, $data['email'], $data['full_name']]);
-            $user_id = $pdo->lastInsertId();
+            // 6. Create User Account (Check for duplicate email first)
+            $checkEmail = $pdo->prepare("SELECT id FROM users WHERE email = ?");
+            $checkEmail->execute([$data['email']]);
+            $existingUser = $checkEmail->fetch();
+            
+            if (!$existingUser) {
+                $username = strtolower($student_id);
+                $password = password_hash($data['mobile'], PASSWORD_DEFAULT);
+                $stmt = $pdo->prepare("INSERT INTO users (username, password, role, email, full_name) VALUES (?, ?, 'student', ?, ?)");
+                $stmt->execute([$username, $password, $data['email'], $data['full_name']]);
+                $user_id = $pdo->lastInsertId();
+            } else {
+                $user_id = $existingUser['id'];
+            }
 
             // 7. Add to main students table for compatibility
             $stmt = $pdo->prepare("INSERT INTO students (user_id, enrollment_no, dob, phone, address, admission_status) VALUES (?, ?, ?, ?, ?, 'enrolled')");
@@ -126,6 +172,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
             // 10. Mark Inquiry as Admitted
             $pdo->prepare("UPDATE visitors SET status = 'converted' WHERE id = ?")->execute([$inquiry_id]);
+            $pdo->prepare("UPDATE inquiries SET status = 'admitted' WHERE id = ?")->execute([$inquiry_id]);
+
+            // 11. Set Premium Success Message
+            $receipt_no = "RCPT-" . date('Y') . "-" . str_pad($main_student_id, 4, '0', STR_PAD_LEFT);
+            $fee_display = number_format($data['paid_fee'], 2);
+            $_SESSION['success_msg'] = "🎓 Admission Confirmed!\n\nWelcome to the TechnoHacks Elite Training System (ETS) 🚀\n\n━━━━━━━━━━━━━━━━━━━\n🧾 Receipt No : $receipt_no  \n💰 Course Fee : ₹$fee_display  \n━━━━━━━━━━━━━━━━━━━\n\n📢 Your enrollment is successfully activated.\n📚 Get ready to upgrade your skills and build your future with us.\n\n💡 TechnoHacks Team wishes you great success ahead!\n\n✨ Let's Start Your Journey →";
 
             $pdo->commit();
             unset($_SESSION['admission_data']);
@@ -139,22 +191,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 }
 
-// File Upload Handling for Step 4
-if ($step == 4 && isset($_FILES['photo'])) {
-    $uploadDir = '../uploads/students/';
-    if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
-    
-    if ($_FILES['photo']['name']) {
-        $photoName = time() . '_photo_' . $_FILES['photo']['name'];
-        move_uploaded_file($_FILES['photo']['tmp_name'], $uploadDir . $photoName);
-        $_SESSION['uploaded_files']['photo'] = 'uploads/students/' . $photoName;
-    }
-    if ($_FILES['id_proof']['name']) {
-        $idName = time() . '_id_' . $_FILES['id_proof']['name'];
-        move_uploaded_file($_FILES['id_proof']['tmp_name'], $uploadDir . $idName);
-        $_SESSION['uploaded_files']['id_proof'] = 'uploads/students/' . $idName;
-    }
-}
+// Final check if files are missing from session but present in request (fallback)
+// This is now handled inside the POST next_step block, so this redundant block can be removed.
 
 include '../includes/header.php';
 include '../includes/sidebar.php';
@@ -222,6 +260,34 @@ include '../includes/sidebar.php';
                 <h5 class="fw-bold mb-4 text-primary border-bottom pb-2">Section 2: Personal Details</h5>
                 <div class="row g-3">
                     <div class="col-md-4">
+                        <label class="form-label small fw-bold">City</label>
+                        <input type="text" name="city" class="form-control" value="<?php echo $_SESSION['admission_data']['city'] ?? ''; ?>" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold">State</label>
+                        <select name="state" class="form-select" required>
+                            <option value="">Select State</option>
+                            <?php
+                            $states = ["Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal", "Andaman and Nicobar Islands", "Chandigarh", "Dadra and Nagar Haveli and Daman and Diu", "Delhi", "Jammu and Kashmir", "Ladakh", "Lakshadweep", "Puducherry"];
+                            foreach($states as $st) {
+                                $selected = ($_SESSION['admission_data']['state'] ?? '') == $st ? 'selected' : '';
+                                echo "<option value='$st' $selected>$st</option>";
+                            }
+                            ?>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold">Aadhaar Number</label>
+                        <input type="text" name="aadhaar_number" class="form-control" value="<?php echo $_SESSION['admission_data']['aadhaar_number'] ?? ''; ?>" maxlength="12" pattern="\d{12}" title="Please enter 12 digit Aadhaar number" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Nationality</label>
+                        <select name="nationality" class="form-select" required>
+                            <option value="Indian" <?php echo ($_SESSION['admission_data']['nationality'] ?? 'Indian') == 'Indian' ? 'selected' : ''; ?>>Indian</option>
+                            <option value="Other" <?php echo ($_SESSION['admission_data']['nationality'] ?? '') == 'Other' ? 'selected' : ''; ?>>Other</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
                         <label class="form-label small fw-bold">Category</label>
                         <select name="category" class="form-select" required>
                             <option value="General" <?php echo ($_SESSION['admission_data']['category'] ?? '') == 'General' ? 'selected' : ''; ?>>General</option>
@@ -230,27 +296,32 @@ include '../includes/sidebar.php';
                             <option value="ST" <?php echo ($_SESSION['admission_data']['category'] ?? '') == 'ST' ? 'selected' : ''; ?>>ST</option>
                         </select>
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label small fw-bold">Caste</label>
-                        <input type="text" name="caste" class="form-control" value="<?php echo $_SESSION['admission_data']['caste'] ?? ''; ?>" required>
+                    <div class="col-md-12">
+                        <label class="form-label small fw-bold">Current Address</label>
+                        <textarea name="address" id="current_address" class="form-control" rows="2" required><?php echo $_SESSION['admission_data']['address'] ?? ''; ?></textarea>
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label small fw-bold">Religion</label>
-                        <input type="text" name="religion" class="form-control" value="<?php echo $_SESSION['admission_data']['religion'] ?? ''; ?>" required>
+                    <div class="col-md-12 mt-2">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="same_as_current" onchange="copyAddress()">
+                            <label class="form-check-label small" for="same_as_current">Permanent Address same as Current Address</label>
+                        </div>
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label small fw-bold">Domicile</label>
-                        <input type="text" name="domicile" class="form-control" value="<?php echo $_SESSION['admission_data']['domicile'] ?? ''; ?>" required>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label small fw-bold">Nationality</label>
-                        <input type="text" name="nationality" class="form-control" value="<?php echo $_SESSION['admission_data']['nationality'] ?? 'Indian'; ?>" required>
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label small fw-bold">Address</label>
-                        <textarea name="address" class="form-control" rows="3" required><?php echo $_SESSION['admission_data']['address'] ?? ''; ?></textarea>
+                    <div class="col-md-12">
+                        <label class="form-label small fw-bold">Permanent Address</label>
+                        <textarea name="permanent_address" id="permanent_address" class="form-control" rows="2" required><?php echo $_SESSION['admission_data']['permanent_address'] ?? ''; ?></textarea>
                     </div>
                 </div>
+
+                <script>
+                function copyAddress() {
+                    const current = document.getElementById('current_address');
+                    const permanent = document.getElementById('permanent_address');
+                    const checkbox = document.getElementById('same_as_current');
+                    if (checkbox.checked) {
+                        permanent.value = current.value;
+                    }
+                }
+                </script>
                 <div class="mt-4 d-flex justify-content-between">
                     <button type="submit" name="prev_step" class="btn btn-outline-secondary px-4 rounded-pill"><i class="fas fa-chevron-left me-2"></i> Previous</button>
                     <button type="submit" name="next_step" class="btn btn-primary px-4 rounded-pill">Next Step <i class="fas fa-chevron-right ms-2"></i></button>
@@ -342,31 +413,75 @@ include '../includes/sidebar.php';
                     </div>
                     <div class="col-md-4">
                         <label class="form-label small fw-bold">Installments</label>
-                        <select name="installments" class="form-select" required>
+                        <select name="installments" id="installments" class="form-select" required onchange="toggleInstallmentFields()">
                             <option value="1" <?php echo ($_SESSION['admission_data']['installments'] ?? '') == '1' ? 'selected' : ''; ?>>Full Payment (1)</option>
                             <option value="2" <?php echo ($_SESSION['admission_data']['installments'] ?? '') == '2' ? 'selected' : ''; ?>>2 Installments</option>
                             <option value="3" <?php echo ($_SESSION['admission_data']['installments'] ?? '') == '3' ? 'selected' : ''; ?>>3 Installments</option>
                         </select>
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label small fw-bold">Next Installment Date</label>
-                        <input type="date" name="next_date" class="form-control" value="<?php echo $_SESSION['admission_data']['next_date'] ?? ''; ?>">
+                    <!-- 2nd Installment Fields -->
+                    <div class="col-md-4 installment-2-field" style="display: <?php echo ($_SESSION['admission_data']['installments'] ?? 1) >= 2 ? 'block' : 'none'; ?>;">
+                        <label class="form-label small fw-bold">2nd Installment Amount</label>
+                        <input type="number" name="next_installment_amount" id="next_installment_amount" class="form-control" value="<?php echo $_SESSION['admission_data']['next_installment_amount'] ?? 0; ?>">
                     </div>
+                    <div class="col-md-4 installment-2-field" style="display: <?php echo ($_SESSION['admission_data']['installments'] ?? 1) >= 2 ? 'block' : 'none'; ?>;">
+                        <label class="form-label small fw-bold">2nd Due Date</label>
+                        <input type="date" name="next_installment_date" id="next_installment_date" class="form-control" value="<?php echo $_SESSION['admission_data']['next_installment_date'] ?? ''; ?>">
+                    </div>
+                    
+                    <!-- 3rd Installment Fields -->
+                    <div class="col-md-4 installment-3-field" style="display: <?php echo ($_SESSION['admission_data']['installments'] ?? 1) == 3 ? 'block' : 'none'; ?>;">
+                        <label class="form-label small fw-bold">3rd Installment Amount</label>
+                        <input type="number" name="third_installment_amount" id="third_installment_amount" class="form-control" value="<?php echo $_SESSION['admission_data']['third_installment_amount'] ?? 0; ?>">
+                    </div>
+                    <div class="col-md-4 installment-3-field" style="display: <?php echo ($_SESSION['admission_data']['installments'] ?? 1) == 3 ? 'block' : 'none'; ?>;">
+                        <label class="form-label small fw-bold">3rd Due Date</label>
+                        <input type="date" name="third_installment_date" id="third_installment_date" class="form-control" value="<?php echo $_SESSION['admission_data']['third_installment_date'] ?? ''; ?>">
+                    </div>
+
                     <div class="col-md-4">
                         <label class="form-label small fw-bold">Payment Mode</label>
                         <select name="payment_mode" class="form-select" required>
-                            <option value="Cash">Cash</option>
-                            <option value="UPI">UPI</option>
-                            <option value="Card">Card</option>
-                            <option value="Net Banking">Net Banking</option>
+                            <option value="Cash" <?php echo ($_SESSION['admission_data']['payment_mode'] ?? '') == 'Cash' ? 'selected' : ''; ?>>Cash</option>
+                            <option value="UPI" <?php echo ($_SESSION['admission_data']['payment_mode'] ?? '') == 'UPI' ? 'selected' : ''; ?>>UPI</option>
+                            <option value="Card" <?php echo ($_SESSION['admission_data']['payment_mode'] ?? '') == 'Card' ? 'selected' : ''; ?>>Card</option>
+                            <option value="Net Banking" <?php echo ($_SESSION['admission_data']['payment_mode'] ?? '') == 'Net Banking' ? 'selected' : ''; ?>>Net Banking</option>
                         </select>
                     </div>
                 </div>
+
                 <script>
                 function calcPending() {
-                    const total = document.getElementById('total_fee').value;
-                    const paid = document.getElementById('paid_fee').value;
-                    document.getElementById('pending_fee').value = total - paid;
+                    const total = parseFloat(document.getElementById('total_fee').value) || 0;
+                    const paid = parseFloat(document.getElementById('paid_fee').value) || 0;
+                    const pending = total - paid;
+                    document.getElementById('pending_fee').value = pending;
+                    
+                    const instCount = parseInt(document.getElementById('installments').value);
+                    if (pending > 0) {
+                        if (instCount === 2) {
+                            document.getElementById('next_installment_amount').value = pending;
+                            document.getElementById('third_installment_amount').value = 0;
+                        } else if (instCount === 3) {
+                            const half = Math.floor(pending / 2);
+                            document.getElementById('next_installment_amount').value = half;
+                            document.getElementById('third_installment_amount').value = pending - half;
+                        }
+                    }
+                }
+                
+                function toggleInstallmentFields() {
+                    const instCount = parseInt(document.getElementById('installments').value);
+                    
+                    document.querySelectorAll('.installment-2-field').forEach(el => {
+                        el.style.display = instCount >= 2 ? 'block' : 'none';
+                    });
+                    
+                    document.querySelectorAll('.installment-3-field').forEach(el => {
+                        el.style.display = instCount === 3 ? 'block' : 'none';
+                    });
+                    
+                    calcPending();
                 }
                 </script>
                 <div class="mt-4 d-flex justify-content-between">
