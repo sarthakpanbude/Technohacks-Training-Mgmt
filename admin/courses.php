@@ -9,14 +9,14 @@ $activePage = "courses";
 // Handle Add Course
 if (isset($_POST['add_course'])) {
     $course_type = $_POST['course_type'];
-    $name = $_POST['name'];
+    $course_name = $_POST['course_name'];
     $desc = $_POST['description'];
     $duration = $_POST['duration'];
     $fees = $_POST['fees'];
     $level = $_POST['level'];
 
-    $stmt = $pdo->prepare("INSERT INTO courses (course_type, name, description, duration, fees, level) VALUES (?, ?, ?, ?, ?, ?)");
-    $stmt->execute([$course_type, $name, $desc, $duration, $fees, $level]);
+    $stmt = $pdo->prepare("INSERT INTO courses (course_type, course_name, description, duration, fees, level) VALUES (?, ?, ?, ?, ?, ?)");
+    $stmt->execute([$course_type, $course_name, $desc, $duration, $fees, $level]);
     header("Location: courses.php?msg=Course Added");
     exit;
 }
@@ -63,7 +63,7 @@ include '../includes/sidebar.php';
                                     </ul>
                                 </div>
                             </div>
-                            <h5 class="fw-bold"><?php echo htmlspecialchars($c['name']); ?></h5>
+                            <h5 class="fw-bold"><?php echo htmlspecialchars($c['course_name']); ?></h5>
                             <p class="text-muted small"><?php echo htmlspecialchars(substr($c['description'] ?? '', 0, 80)) . '...'; ?></p>
                         </div>
                     </div>
@@ -90,7 +90,7 @@ include '../includes/sidebar.php';
                                     </ul>
                                 </div>
                             </div>
-                            <h5 class="fw-bold"><?php echo htmlspecialchars($c['name']); ?></h5>
+                            <h5 class="fw-bold"><?php echo htmlspecialchars($c['course_name']); ?></h5>
                             <p class="text-muted small"><?php echo htmlspecialchars(substr($c['description'] ?? '', 0, 80)) . '...'; ?></p>
                             <div class="d-flex justify-content-between align-items-center mt-4">
                                 <div>
@@ -122,7 +122,7 @@ include '../includes/sidebar.php';
                     <div class="modal-body p-4">
                         <div class="mb-3">
                             <label class="form-label small fw-bold">Course Name</label>
-                            <input type="text" name="name" class="form-control" required>
+                            <input type="text" name="course_name" class="form-control" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label small fw-bold">Description</label>

@@ -44,24 +44,43 @@ if ($_SESSION['role'] === 'student') {
 }
 
 // Function to convert number to words (Indian Rupees style)
-function numberToWords($number) {
-    $no = (int)floor($number);
+function numberToWords($number)
+{
+    $no = (int) floor($number);
     $point = round($number - $no, 2) * 100;
     $hundred = null;
     $digits_1 = strlen($no);
     $i = 0;
     $str = array();
     $words = array(
-        '0' => '', '1' => 'One', '2' => 'Two',
-        '3' => 'Three', '4' => 'Four', '5' => 'Five', '6' => 'Six',
-        '7' => 'Seven', '8' => 'Eight', '9' => 'Nine',
-        '10' => 'Ten', '11' => 'Eleven', '12' => 'Twelve',
-        '13' => 'Thirteen', '14' => 'Fourteen',
-        '15' => 'Fifteen', '16' => 'Sixteen', '17' => 'Seventeen',
-        '18' => 'Eighteen', '19' => 'Nineteen', '20' => 'Twenty',
-        '30' => 'Thirty', '40' => 'Forty', '50' => 'Fifty',
-        '60' => 'Sixty', '70' => 'Seventy',
-        '80' => 'Eighty', '90' => 'Ninety'
+        '0' => '',
+        '1' => 'One',
+        '2' => 'Two',
+        '3' => 'Three',
+        '4' => 'Four',
+        '5' => 'Five',
+        '6' => 'Six',
+        '7' => 'Seven',
+        '8' => 'Eight',
+        '9' => 'Nine',
+        '10' => 'Ten',
+        '11' => 'Eleven',
+        '12' => 'Twelve',
+        '13' => 'Thirteen',
+        '14' => 'Fourteen',
+        '15' => 'Fifteen',
+        '16' => 'Sixteen',
+        '17' => 'Seventeen',
+        '18' => 'Eighteen',
+        '19' => 'Nineteen',
+        '20' => 'Twenty',
+        '30' => 'Thirty',
+        '40' => 'Forty',
+        '50' => 'Fifty',
+        '60' => 'Sixty',
+        '70' => 'Seventy',
+        '80' => 'Eighty',
+        '90' => 'Ninety'
     );
     $digits = array('', 'Hundred', 'Thousand', 'Lakh', 'Crore');
     while ($i < $digits_1) {
@@ -72,13 +91,14 @@ function numberToWords($number) {
         if ($number) {
             $plural = (($counter = count($str)) && $number > 9) ? 's' : null;
             $hundred = ($counter == 1 && $str[0]) ? ' and ' : null;
-            $str [] = ($number < 21) ? $words[$number] .
+            $str[] = ($number < 21) ? $words[$number] .
                 " " . $digits[$counter] . $plural . " " . $hundred
                 :
                 $words[floor($number / 10) * 10]
                 . " " . $words[$number % 10] . " "
                 . $digits[$counter] . $plural . " " . $hundred;
-        } else $str[] = null;
+        } else
+            $str[] = null;
     }
     $str = array_reverse($str);
     $result = implode('', $str);
@@ -98,6 +118,7 @@ $due_date = date('d/m/Y', strtotime($payment['payment_date'] . ' + 30 days'));
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Bill of Supply - <?php echo $payment['receipt_no']; ?></title>
@@ -105,19 +126,19 @@ $due_date = date('d/m/Y', strtotime($payment['payment_date'] . ' + 30 days'));
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
-        
-        body { 
-            background: #f0f2f5; 
-            font-family: 'Poppins', sans-serif; 
+
+        body {
+            background: #f0f2f5;
+            font-family: 'Poppins', sans-serif;
             color: #333;
         }
-        
+
         .bill-container {
             max-width: 850px;
             margin: 30px auto;
             background: #fff;
             padding: 0;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
         }
 
         .bill-header {
@@ -320,12 +341,26 @@ $due_date = date('d/m/Y', strtotime($payment['payment_date'] . ' + 30 days'));
         }
 
         @media print {
-            body { background: #fff; margin: 0; padding: 0; }
-            .bill-container { box-shadow: none; margin: 0; width: 100%; max-width: 100%; }
-            .no-print { display: none !important; }
+            body {
+                background: #fff;
+                margin: 0;
+                padding: 0;
+            }
+
+            .bill-container {
+                box-shadow: none;
+                margin: 0;
+                width: 100%;
+                max-width: 100%;
+            }
+
+            .no-print {
+                display: none !important;
+            }
         }
     </style>
 </head>
+
 <body>
     <div class="container py-4 no-print">
         <div class="d-flex justify-content-center gap-2">
@@ -429,32 +464,35 @@ $due_date = date('d/m/Y', strtotime($payment['payment_date'] . ' + 30 days'));
         </div>
 
         <?php if (!empty($pending_installments)): ?>
-        <div class="installments-section px-5 mb-4">
-            <h6 class="fw-bold text-uppercase border-bottom pb-2 mb-3" style="font-size: 13px; color: #800080;">Upcoming Installment Schedule</h6>
-            <div class="row g-3">
-                <?php foreach ($pending_installments as $inst): ?>
-                <div class="col-6">
-                    <div class="p-3 border rounded bg-light">
-                        <div class="small text-muted mb-1">Installment #<?php echo $inst['installment_no']; ?></div>
-                        <div class="fw-bold fs-5">₹ <?php echo number_format($inst['amount'], 2); ?></div>
-                        <div class="small text-primary">Due: <?php echo date('d M Y', strtotime($inst['due_date'])); ?></div>
-                    </div>
+            <div class="installments-section px-5 mb-4">
+                <h6 class="fw-bold text-uppercase border-bottom pb-2 mb-3" style="font-size: 13px; color: #800080;">Upcoming
+                    Installment Schedule</h6>
+                <div class="row g-3">
+                    <?php foreach ($pending_installments as $inst): ?>
+                        <div class="col-6">
+                            <div class="p-3 border rounded bg-light">
+                                <div class="small text-muted mb-1">Installment #<?php echo $inst['installment_no']; ?></div>
+                                <div class="fw-bold fs-5">₹ <?php echo number_format($inst['amount'], 2); ?></div>
+                                <div class="small text-primary">Due: <?php echo date('d M Y', strtotime($inst['due_date'])); ?>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
-                <?php endforeach; ?>
             </div>
-        </div>
         <?php endif; ?>
 
         <div class="signature-section">
 
             <div class="signature-placeholder">
                 <!-- Signature Image Placeholder -->
-                <img src="https://upload.wikimedia.org/wikipedia/commons/3/3a/Jon_Kirsch%27s_Signature.png" class="signature-img" style="opacity: 0.7; filter: grayscale(1);">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/3/3a/Jon_Kirsch%27s_Signature.png"
+                    class="signature-img" style="opacity: 0.7; filter: grayscale(1);">
             </div>
             <div class="signature-label">AUTHORISED SIGNATORY FOR</div>
             <div class="signature-company">TechnoHacks EduTech</div>
         </div>
     </div>
 </body>
-</html>
 
+</html>

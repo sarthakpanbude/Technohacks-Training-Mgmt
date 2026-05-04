@@ -36,11 +36,11 @@ if ($check->fetch()) {
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $cert_no = "THS-" . date('Y') . "-" . str_pad(mt_rand(1, 99999), 5, '0', STR_PAD_LEFT);
-    
+
     try {
         $stmt = $pdo->prepare("INSERT INTO certificates (enrollment_id, certificate_no, issued_date) VALUES (?, ?, CURRENT_TIMESTAMP)");
         $stmt->execute([$enrollment_id, $cert_no]);
-        
+
         header("Location: view_student.php?id=" . $enrollment['student_id'] . "&msg=Certificate Issued Successfully");
         exit;
     } catch (PDOException $e) {
@@ -71,7 +71,8 @@ include '../includes/sidebar.php';
                 <?php endif; ?>
 
                 <div class="text-center mb-4">
-                    <div class="avatar mx-auto bg-primary text-white rounded-circle d-flex align-items-center justify-content-center mb-3" style="width: 70px; height: 70px; font-size: 1.5rem; font-weight: bold;">
+                    <div class="avatar mx-auto bg-primary text-white rounded-circle d-flex align-items-center justify-content-center mb-3"
+                        style="width: 70px; height: 70px; font-size: 1.5rem; font-weight: bold;">
                         <i class="fas fa-award"></i>
                     </div>
                     <h5 class="fw-bold mb-1">Confirm Issuance</h5>
