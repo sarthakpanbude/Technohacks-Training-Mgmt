@@ -96,11 +96,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['confirm_admission'])) 
         $stmt->execute([strtolower($student_id), $password, $_POST['email'], $_POST['full_name']]);
         $user_id = $pdo->lastInsertId();
 
-        $stmt = $pdo->prepare("INSERT INTO students (user_id, enrollment_no, dob, phone, address, admission_status) VALUES (?, ?, ?, ?, ?, 'enrolled')");
-        $stmt->execute([$user_id, $student_id, $_POST['dob'], $_POST['mobile'], $_POST['address']]);
+        $stmt = $pdo->prepare("INSERT INTO students (user_id, enrollment_no, dob, phone, address, admission_status, referral_id, course) VALUES (?, ?, ?, ?, ?, 'enrolled', ?, ?)");
+        $stmt->execute([$user_id, $student_id, $_POST['dob'], $_POST['mobile'], $_POST['address'], (!empty($_POST['referral_id']) ? $_POST['referral_id'] : null), $_POST['course']]);
         $main_stu_id = $pdo->lastInsertId();
 
-        // 6. Invoice
+        // 6. Referral Bonus
+        if (!empty($_POST['referral_id']) && $total > 0) {
+            $bonus = $total * 0.10;
+            $stmt = $pdo->prepare("INSERT INTO referral_bonus (referrer_id, referred_student_id, bonus_amount, status) VALUES (?, ?, ?, 'pending')");
+            $stmt->execute([$_POST['referral_id'], $student_id, $bonus]);
+        }
+
+        // 7. Invoice
         if ($paid > 0) {
             $rcpt = "RCPT-" . date('Y') . "-" . str_pad($main_stu_id, 4, '0', STR_PAD_LEFT);
             $stmt = $pdo->prepare("INSERT INTO invoices (student_id, receipt_no, amount, payment_mode) VALUES (?, ?, ?, ?)");
@@ -282,7 +289,7 @@ include '../includes/sidebar.php';
                 <!-- Tab 3: Fees & Payment -->
                 <div class="tab-pane fade" id="fees" role="tabpanel">
                     <?php
-                    $c_stmt = $pdo->prepare("SELECT fees FROM courses WHERE name = ?");
+                    $c_stmt = $pdo->prepare("SELECT fees FROM courses WHERE course_name = ?");
                     $c_stmt->execute([$inquiry['course']]);
                     $c_fee = $c_stmt->fetchColumn() ?: 0;
                     ?>
@@ -314,6 +321,17 @@ include '../includes/sidebar.php';
                                 <option value="UPI">UPI/Online</option>
                                 <option value="Card">Credit/Debit Card</option>
                                 <option value="Bank Transfer">Bank Transfer</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Referral Student (Optional)</label>
+                            <select name="referral_id" class="form-select">
+                                <option value="">-- No Referrer --</option>
+                                <?php
+                                $referrers = $pdo->query("SELECT s.enrollment_no, u.full_name FROM students s JOIN users u ON s.user_id = u.id WHERE s.admission_status = 'active' OR s.admission_status = 'enrolled' ORDER BY u.full_name ASC")->fetchAll();
+                                foreach($referrers as $r): ?>
+                                    <option value="<?php echo $r['enrollment_no']; ?>"><?php echo $r['enrollment_no']; ?> - <?php echo htmlspecialchars($r['full_name']); ?></option>
+                                <?php endforeach; ?>
                             </select>
                         </div>
                     </div>
