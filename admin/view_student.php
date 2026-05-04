@@ -7,7 +7,7 @@ $pageTitle = "Student Profile";
 $activePage = "students";
 
 $id = $_GET['id'] ?? 0;
-$student = $pdo->prepare("SELECT s.*, COALESCE(u.full_name, s.name) as display_name, u.email, u.created_at as joined_at FROM students s LEFT JOIN users u ON s.user_id = u.id WHERE s.id = ?");
+$student = $pdo->prepare("SELECT s.*, u.full_name as display_name, u.email, u.created_at as joined_at FROM students s LEFT JOIN users u ON s.user_id = u.id WHERE s.id = ?");
 $student->execute([$id]);
 $student = $student->fetch();
 

@@ -45,14 +45,19 @@ if ($id) {
             $student_id = "STU-" . date('Y') . "-" . rand(1000, 9999);
 
             // 5. Insert into students
-            $stmt = $pdo->prepare("INSERT INTO students (student_unique_id, user_id, enrollment_no, name, phone, course, domain, admission_status, source, admission_date) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', 'inquiry', CURDATE())");
+            $stmt = $pdo->prepare("INSERT INTO students (user_id, enrollment_no, phone, admission_status) VALUES (?, ?, ?, 'active')");
             $stmt->execute([
-                $student_id,
                 $user_id,
                 $student_id,
+                $inquiry['mobile']
+            ]);
+
+            // 6. Insert into students_basic for details
+            $stmt = $pdo->prepare("INSERT INTO students_basic (student_id, full_name, email, course) VALUES (?, ?, ?, ?)");
+            $stmt->execute([
+                $student_id,
                 $inquiry['name'],
-                $inquiry['mobile'],
-                $inquiry['course'],
+                $email,
                 $inquiry['course']
             ]);
 

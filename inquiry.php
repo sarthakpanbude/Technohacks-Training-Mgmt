@@ -117,20 +117,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
                 <div class="col-12">
                     <label class="form-label small fw-bold">Select Domain</label>
-                    <select name="domain" class="form-select" required>
+                    <select name="domain" id="domainSelect" class="form-select" required>
                         <option value="">Choose your course interest...</option>
-                        <?php
-                        $courses_query = $pdo->query("SELECT course_name FROM courses ORDER BY course_name ASC");
-                        while($course = $courses_query->fetch()) {
-                            echo "<option value=\"".htmlspecialchars($course['course_name'])."\">".htmlspecialchars($course['course_name'])."</option>";
-                        }
-                        ?>
                     </select>
                 </div>
 
                 <div class="col-md-6">
                     <label class="form-label small fw-bold">Inquiry Type</label>
-                    <select name="type" class="form-select" required>
+                    <select name="type" id="typeSelect" class="form-select" required onchange="filterDomains()">
                         <option value="Course">Course Admission</option>
                         <option value="Internship">Internship Program</option>
                     </select>
@@ -141,8 +135,50 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     <select name="mode" class="form-select" required>
                         <option value="Online">Online (Virtual)</option>
                         <option value="Offline">Offline (At Center)</option>
+                        <option value="Hybrid">Hybrid (Online + Offline)</option>
                     </select>
                 </div>
+
+                <script>
+                    const allDomains = <?php 
+                        $courses_query = $pdo->query("SELECT course_name, course_type, level, duration FROM courses ORDER BY course_name ASC");
+                        echo json_encode($courses_query->fetchAll(PDO::FETCH_ASSOC));
+                    ?>;
+
+                    function filterDomains() {
+                        const type = document.getElementById('typeSelect').value;
+                        const domainSelect = document.getElementById('domainSelect');
+                        const selectedType = type === 'Course' ? 'Training' : 'Internship';
+                        
+                        domainSelect.innerHTML = '<option value="">Choose your ' + type.toLowerCase() + ' interest...</option>';
+                        
+                        allDomains.forEach(domain => {
+                            if (domain.course_type === selectedType) {
+                                const option = document.createElement('option');
+                                option.value = domain.course_name;
+                                // Display format: 
+                                // Training: Course Name [Level] [Duration]
+                                // Internship: Course Name [Duration]
+                                let displayText = domain.course_name;
+                                
+                                // Only show level for Training
+                                if (selectedType === 'Training' && domain.level) {
+                                    displayText += ' [' + domain.level + ']';
+                                }
+                                
+                                if (domain.duration) {
+                                    displayText += ' [' + domain.duration + ']';
+                                }
+                                
+                                option.textContent = displayText;
+                                domainSelect.appendChild(option);
+                            }
+                        });
+                    }
+
+                    // Run once on load to initialize domains
+                    document.addEventListener('DOMContentLoaded', filterDomains);
+                </script>
 
                 <div class="col-12 mt-4">
                     <button type="submit" class="btn btn-primary w-100 py-3 rounded-pill shadow fw-bold">

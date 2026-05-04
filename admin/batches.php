@@ -13,12 +13,34 @@ $courses = $pdo->query("SELECT id, course_name FROM courses")->fetchAll();
 // Handle Add Batch
 if (isset($_POST['add_batch'])) {
     $course_id = $_POST['course_id'];
-    $teacher_id = $_POST['teacher_id'];
+    $teacher_name = trim($_POST['teacher_name']);
     $name = $_POST['batch_name'];
     $schedule = $_POST['schedule'];
     $start_time = $_POST['start_time'] ?? '';
     $capacity = $_POST['capacity'];
     $start_date = $_POST['start_date'];
+
+    // Resolve or create teacher
+    $stmt = $pdo->prepare("SELECT t.id FROM teachers t JOIN users u ON t.user_id = u.id WHERE u.full_name = ? LIMIT 1");
+    $stmt->execute([$teacher_name]);
+    $teacher = $stmt->fetch();
+
+    if ($teacher) {
+        $teacher_id = $teacher['id'];
+    } else {
+        // Create new teacher
+        $username = strtolower(str_replace(' ', '_', $teacher_name)) . rand(1000, 9999);
+        $password = password_hash('password123', PASSWORD_DEFAULT);
+        $email = $username . '@technohacks.com';
+        
+        $stmt = $pdo->prepare("INSERT INTO users (username, password, role, email, full_name) VALUES (?, ?, 'teacher', ?, ?)");
+        $stmt->execute([$username, $password, $email, $teacher_name]);
+        $user_id = $pdo->lastInsertId();
+        
+        $stmt = $pdo->prepare("INSERT INTO teachers (user_id) VALUES (?)");
+        $stmt->execute([$user_id]);
+        $teacher_id = $pdo->lastInsertId();
+    }
 
     $stmt = $pdo->prepare("INSERT INTO batches (course_id, teacher_id, batch_name, schedule, start_time, capacity, start_date) VALUES (?, ?, ?, ?, ?, ?, ?)");
     $stmt->execute([$course_id, $teacher_id, $name, $schedule, $start_time, $capacity, $start_date]);
@@ -100,12 +122,13 @@ include '../includes/sidebar.php';
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label small fw-bold">Assign Teacher</label>
-                            <select name="teacher_id" class="form-select" required>
+                            <label class="form-label small fw-bold">Teacher Name</label>
+                            <input type="text" name="teacher_name" class="form-control" list="teacherList" placeholder="Type or select a teacher..." required>
+                            <datalist id="teacherList">
                                 <?php foreach ($teachers as $t): ?>
-                                    <option value="<?php echo $t['id']; ?>"><?php echo $t['full_name']; ?></option>
+                                    <option value="<?php echo htmlspecialchars($t['full_name']); ?>">
                                 <?php endforeach; ?>
-                            </select>
+                            </datalist>
                         </div>
                         <div class="mb-3">
                             <label class="form-label small fw-bold">Batch Name (e.g. WD-Morning-2024)</label>
