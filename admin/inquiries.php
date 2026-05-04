@@ -28,6 +28,9 @@ include '../includes/sidebar.php';
 
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h4 class="fw-bold mb-0">Student Inquiries</h4>
+        <a href="admit.php?new=1" class="btn btn-primary rounded-pill px-4 shadow-sm">
+            <i class="fas fa-plus me-2"></i>New Admission
+        </a>
     </div>
 
     <div class="stat-card bg-white rounded-4 shadow-sm border-0">
