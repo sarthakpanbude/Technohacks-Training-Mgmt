@@ -14,10 +14,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $domain = $_POST['domain'];
     $type = $_POST['type'];
     $mode = $_POST['mode'];
+    $duration = $_POST['internship_duration'] ?? '';
+    $level = $_POST['course_level'] ?? '';
 
     try {
         $stmt = $pdo->prepare("INSERT INTO inquiries (name, mobile, course, message, status) VALUES (?, ?, ?, ?, 'Successfully Submitted')");
-        $stmt->execute([$name, $phone, $domain, "Inquiry for $type ($mode) - Age: $age, Gender: $gender, Email: $email"]);
+        $msg_body = "Inquiry for $type ($mode)";
+        if ($type == 'Internship' && !empty($duration)) {
+            $msg_body .= " - Duration: $duration";
+        }
+        if ($type == 'Course' && !empty($level)) {
+            $msg_body .= " - Level: $level";
+        }
+        $msg_body .= " - Age: $age, Gender: $gender, Email: $email";
+        $stmt->execute([$name, $phone, $domain, $msg_body]);
         $message = "Your inquiry has been submitted successfully! Our team will contact you soon.";
         $status = "success";
     } catch (PDOException $e) {
@@ -125,6 +135,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <div class="col-md-6">
                     <label class="form-label small fw-bold">Inquiry Type</label>
                     <select name="type" id="typeSelect" class="form-select" required onchange="filterDomains()">
+                        <option value="">Select Inquiry Type</option>
                         <option value="Course">Course Admission</option>
                         <option value="Internship">Internship Program</option>
                     </select>
@@ -139,6 +150,30 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     </select>
                 </div>
 
+                <div class="col-12" id="durationContainer" style="display: none;">
+                    <label class="form-label small fw-bold">Preferred Internship Duration</label>
+                    <select name="internship_duration" id="durationSelect" class="form-select">
+                        <option value="">Select Duration</option>
+                        <option value="15 Days">15 Days</option>
+                        <option value="45 Days">45 Days</option>
+                        <option value="1 Month">1 Month</option>
+                        <option value="2 Months">2 Months</option>
+                        <option value="3 Months">3 Months</option>
+                        <option value="4 Months">4 Months</option>
+                        <option value="6 Months">6 Months</option>
+                    </select>
+                </div>
+
+                <div class="col-12" id="levelContainer" style="display: none;">
+                    <label class="form-label small fw-bold">Preferred Course Level</label>
+                    <select name="course_level" id="levelSelect" class="form-select">
+                        <option value="">Select Level</option>
+                        <option value="Full Course">Full Course</option>
+                        <option value="Advanced">Advanced</option>
+                        <option value="Small Course">Small Course</option>
+                    </select>
+                </div>
+
                 <script>
                     const allDomains = <?php 
                         $courses_query = $pdo->query("SELECT course_name, course_type, level, duration FROM courses ORDER BY course_name ASC");
@@ -146,34 +181,41 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     ?>;
 
                     function filterDomains() {
-                        const type = document.getElementById('typeSelect').value;
+                        const typeSelect = document.getElementById('typeSelect');
+                        const type = typeSelect.value;
                         const domainSelect = document.getElementById('domainSelect');
+                        const durationContainer = document.getElementById('durationContainer');
+                        const durationSelect = document.getElementById('durationSelect');
+                        const levelContainer = document.getElementById('levelContainer');
+                        const levelSelect = document.getElementById('levelSelect');
+                        
+                        // Hide everything by default
+                        durationContainer.style.display = 'none';
+                        durationSelect.required = false;
+                        levelContainer.style.display = 'none';
+                        levelSelect.required = false;
+
+                        if (type === 'Internship') {
+                            durationContainer.style.display = 'block';
+                            durationSelect.required = true;
+                        } else if (type === 'Course') {
+                            levelContainer.style.display = 'block';
+                            levelSelect.required = true;
+                        }
+
                         const selectedType = type === 'Course' ? 'Training' : 'Internship';
+                        domainSelect.innerHTML = '<option value="">' + (type ? 'Choose your ' + type.toLowerCase() + ' interest...' : 'Choose your course interest...') + '</option>';
                         
-                        domainSelect.innerHTML = '<option value="">Choose your ' + type.toLowerCase() + ' interest...</option>';
-                        
-                        allDomains.forEach(domain => {
-                            if (domain.course_type === selectedType) {
-                                const option = document.createElement('option');
-                                option.value = domain.course_name;
-                                // Display format: 
-                                // Training: Course Name [Level] [Duration]
-                                // Internship: Course Name [Duration]
-                                let displayText = domain.course_name;
-                                
-                                // Only show level for Training
-                                if (selectedType === 'Training' && domain.level) {
-                                    displayText += ' [' + domain.level + ']';
+                        if (type) {
+                            allDomains.forEach(domain => {
+                                if (domain.course_type === selectedType) {
+                                    const option = document.createElement('option');
+                                    option.value = domain.course_name;
+                                    option.textContent = domain.course_name;
+                                    domainSelect.appendChild(option);
                                 }
-                                
-                                if (domain.duration) {
-                                    displayText += ' [' + domain.duration + ']';
-                                }
-                                
-                                option.textContent = displayText;
-                                domainSelect.appendChild(option);
-                            }
-                        });
+                            });
+                        }
                     }
 
                     // Run once on load to initialize domains

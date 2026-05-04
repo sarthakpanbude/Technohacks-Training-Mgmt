@@ -65,16 +65,6 @@ include '../includes/sidebar.php';
                             </div>
                             <h5 class="fw-bold"><?php echo htmlspecialchars($c['name']); ?></h5>
                             <p class="text-muted small"><?php echo htmlspecialchars(substr($c['description'] ?? '', 0, 80)) . '...'; ?></p>
-                            <div class="d-flex justify-content-between align-items-center mt-4">
-                                <div>
-                                    <span class="text-muted small">Fees</span>
-                                    <h6 class="fw-bold mb-0">₹<?php echo number_format($c['fees'], 2); ?></h6>
-                                </div>
-                                <div class="text-end">
-                                    <span class="text-muted small">Duration</span>
-                                    <h6 class="fw-bold mb-0"><?php echo htmlspecialchars($c['duration']); ?></h6>
-                                </div>
-                            </div>
                         </div>
                     </div>
                     <?php endforeach; ?>
