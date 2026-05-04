@@ -393,7 +393,7 @@ $due_date = date('d/m/Y', strtotime($payment['payment_date'] . ' + 30 days'));
                 <img src="../assets/img/logo.png" alt="TechnoHacks">
             </div>
             <div class="company-details">
-                <h1>TechnoHacks EduTech</h1>
+                <h1>TechnoHacks Solutions</h1>
                 <div class="company-info">
                     <p>Nashik, Maharashtra 422010, India, Nashik, Maharashtra, 422010</p>
                     <p><strong>Mobile:</strong> 8208937014</p>
@@ -490,7 +490,7 @@ $due_date = date('d/m/Y', strtotime($payment['payment_date'] . ' + 30 days'));
                     class="signature-img" style="opacity: 0.7; filter: grayscale(1);">
             </div>
             <div class="signature-label">AUTHORISED SIGNATORY FOR</div>
-            <div class="signature-company">TechnoHacks EduTech</div>
+            <div class="signature-company">TechnoHacks Solutions</div>
         </div>
     </div>
 </body>

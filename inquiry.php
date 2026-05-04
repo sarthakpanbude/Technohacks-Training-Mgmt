@@ -20,13 +20,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $duration = $_POST['internship_duration'] ?? '';
 
     try {
-        $stmt = $pdo->prepare("INSERT INTO inquiries (name, mobile, course, message, status) VALUES (?, ?, ?, ?, 'Successfully Submitted')");
+        $stmt = $pdo->prepare("INSERT INTO inquiries (name, mobile, email, course, message, status) VALUES (?, ?, ?, ?, ?, 'Successfully Submitted')");
         $msg_body = "Inquiry for $type ($mode)";
         if ($type == 'Internship' && !empty($duration)) {
             $msg_body .= " - Duration: $duration";
         }
-        $msg_body .= " - Age: $age, Gender: $gender, Email: $email";
-        $stmt->execute([$name, $phone, $domain, $msg_body]);
+        $msg_body .= " - Age: $age, Gender: $gender";
+        $stmt->execute([$name, $phone, $email, $domain, $msg_body]);
         $message = "Your inquiry has been submitted successfully! Our team will contact you soon.";
         $status = "success";
     } catch (PDOException $e) {
