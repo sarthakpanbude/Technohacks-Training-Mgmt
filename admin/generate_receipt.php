@@ -4,82 +4,429 @@ checkAuth('admin');
 require_once '../config/db.php';
 
 $student_id = $_GET['id'] ?? null;
-$stmt = $pdo->prepare("SELECT sb.full_name, sf.* FROM students_basic sb JOIN student_fees sf ON sb.student_id = sf.student_id WHERE sb.student_id = ?");
+// Use the students_basic and student_fees tables as per the existing logic in this file
+$stmt = $pdo->prepare("SELECT sb.full_name, sb.course, sf.* FROM students_basic sb JOIN student_fees sf ON sb.student_id = sf.student_id WHERE sb.student_id = ?");
 $stmt->execute([$student_id]);
 $s = $stmt->fetch();
-if (!$s) exit("Not found");
+
+if (!$s) {
+    die("Student or fee details not found.");
+}
+
+// Function to convert number to words (Indian Rupees style)
+function numberToWords($number) {
+    $no = (int)floor($number);
+    $point = round($number - $no, 2) * 100;
+    $hundred = null;
+    $digits_1 = strlen($no);
+    $i = 0;
+    $str = array();
+    $words = array(
+        '0' => '', '1' => 'One', '2' => 'Two',
+        '3' => 'Three', '4' => 'Four', '5' => 'Five', '6' => 'Six',
+        '7' => 'Seven', '8' => 'Eight', '9' => 'Nine',
+        '10' => 'Ten', '11' => 'Eleven', '12' => 'Twelve',
+        '13' => 'Thirteen', '14' => 'Fourteen',
+        '15' => 'Fifteen', '16' => 'Sixteen', '17' => 'Seventeen',
+        '18' => 'Eighteen', '19' => 'Nineteen', '20' => 'Twenty',
+        '30' => 'Thirty', '40' => 'Forty', '50' => 'Fifty',
+        '60' => 'Sixty', '70' => 'Seventy',
+        '80' => 'Eighty', '90' => 'Ninety'
+    );
+    $digits = array('', 'Hundred', 'Thousand', 'Lakh', 'Crore');
+    while ($i < $digits_1) {
+        $divider = ($i == 2) ? 10 : 100;
+        $number = floor($no % $divider);
+        $no = floor($no / $divider);
+        $i += ($divider == 10) ? 1 : 2;
+        if ($number) {
+            $plural = (($counter = count($str)) && $number > 9) ? 's' : null;
+            $hundred = ($counter == 1 && $str[0]) ? ' and ' : null;
+            $str [] = ($number < 21) ? $words[$number] .
+                " " . $digits[$counter] . $plural . " " . $hundred
+                :
+                $words[floor($number / 10) * 10]
+                . " " . $words[$number % 10] . " "
+                . $digits[$counter] . $plural . " " . $hundred;
+        } else $str[] = null;
+    }
+    $str = array_reverse($str);
+    $result = implode('', $str);
+    $points = ($point) ?
+        "." . $words[$point / 10] . " " .
+        $words[$point = $point % 10] : '';
+    return $result . "Rupees Only";
+}
+
+$course_name = $s['course'] ?? 'Training Course';
+$total_fees = $s['total_fee'];
+$paid_amount = $s['paid_fee'];
+$balance = $s['pending_fee'];
+$invoice_no = "RCPT-" . date('Y') . $s['id'];
+$invoice_date = date('d/m/Y');
+$due_date = $s['next_installment_date'] ? date('d/m/Y', strtotime($s['next_installment_date'])) : date('d/m/Y', strtotime('+30 days'));
+
 ?>
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Fee Receipt - <?php echo $student_id; ?></title>
+    <meta charset="UTF-8">
+    <title>Bill of Supply - <?php echo $invoice_no; ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        .receipt-container { border: 1px dashed #333; padding: 30px; max-width: 600px; margin: auto; background: #fff; }
-        .logo { height: 50px; }
-        .stamp { border: 2px solid #28a745; color: #28a745; transform: rotate(-15deg); display: inline-block; padding: 5px 10px; font-weight: bold; font-size: 20px; border-radius: 5px; opacity: 0.7; }
-        @media print { body { background: none; } .no-print { display: none; } }
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+        
+        body { 
+            background: #f0f2f5; 
+            font-family: 'Poppins', sans-serif; 
+            color: #333;
+        }
+        
+        .bill-container {
+            max-width: 850px;
+            margin: 30px auto;
+            background: #fff;
+            padding: 0;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+
+        .bill-header {
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .bill-of-supply {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .bill-of-supply span {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .original-tag {
+            border: 1px solid #ccc;
+            padding: 2px 8px;
+            font-size: 11px;
+            color: #777;
+            text-transform: uppercase;
+        }
+
+        .slogan {
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .company-section {
+            padding: 0 40px 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .company-logo img {
+            height: 60px;
+        }
+
+        .company-details h1 {
+            color: #800080;
+            font-weight: 700;
+            font-size: 28px;
+            margin-bottom: 2px;
+        }
+
+        .company-info p {
+            margin: 0;
+            font-size: 12px;
+            color: #555;
+            line-height: 1.4;
+        }
+
+        .invoice-details-bar {
+            background: #e9ecef;
+            padding: 12px 40px;
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .detail-item {
+            font-size: 14px;
+        }
+
+        .detail-item strong {
+            font-weight: 600;
+        }
+
+        .bill-to-section {
+            padding: 0 40px;
+            margin-bottom: 20px;
+        }
+
+        .bill-to-section h6 {
+            font-weight: 700;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .customer-name {
+            font-weight: 700;
+            font-size: 16px;
+            margin-bottom: 2px;
+        }
+
+        .customer-phone {
+            font-size: 13px;
+            color: #555;
+        }
+
+        .services-table {
+            width: 100%;
+            margin-bottom: 0;
+        }
+
+        .services-table th {
+            border-top: 2px solid #800080;
+            border-bottom: 2px solid #800080;
+            padding: 12px 40px;
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .services-table td {
+            padding: 15px 40px;
+            font-size: 14px;
+            vertical-align: middle;
+        }
+
+        .subtotal-bar {
+            background: #800080;
+            color: #fff;
+            padding: 8px 40px;
+            display: flex;
+            justify-content: space-between;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .totals-section {
+            padding: 20px 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .total-row {
+            display: flex;
+            justify-content: flex-end;
+            width: 100%;
+            max-width: 300px;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .total-label {
+            width: 180px;
+            text-align: right;
+            padding-right: 20px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .total-value {
+            width: 120px;
+            text-align: right;
+            font-weight: 600;
+        }
+
+        .grand-total {
+            border-top: 1px solid #333;
+            border-bottom: 1px solid #333;
+            padding: 5px 0;
+            margin: 5px 0;
+        }
+
+        .amount-in-words {
+            text-align: right;
+            font-size: 12px;
+            margin-top: 15px;
+        }
+
+        .amount-in-words p {
+            margin: 0;
+        }
+
+        .amount-in-words .words {
+            font-weight: 600;
+        }
+
+        .signature-section {
+            padding: 40px 40px 60px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .signature-img {
+            height: 60px;
+            margin-bottom: 10px;
+        }
+
+        .signature-label {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            text-align: center;
+        }
+
+        .signature-company {
+            font-size: 12px;
+            text-align: center;
+        }
+
+        @media print {
+            body { background: #fff; margin: 0; padding: 0; }
+            .bill-container { box-shadow: none; margin: 0; width: 100%; max-width: 100%; }
+            .no-print { display: none !important; }
+        }
     </style>
 </head>
-<body class="bg-light p-4">
-    <div class="receipt-container shadow-sm">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <img src="../assets/img/logo.png" class="logo">
-            <div class="text-end">
-                <h5 class="fw-bold mb-0 text-success">PAID RECEIPT</h5>
-                <small class="text-muted">No: RCPT-<?php echo date('Y') . $s['id']; ?></small>
-            </div>
-        </div>
-        
-        <div class="mb-4 text-center">
-            <h4 class="fw-bold mb-0">TechnoHacks Solutions</h4>
-            <p class="small text-muted">Building Careers, Not Just Code</p>
-        </div>
-        
-        <table class="table table-borderless small">
-            <tr><td><strong>Student Name:</strong></td><td><?php echo $s['full_name']; ?></td></tr>
-            <tr><td><strong>Enrollment ID:</strong></td><td><?php echo $s['student_id']; ?></td></tr>
-            <tr><td><strong>Date:</strong></td><td><?php echo date('d M, Y'); ?></td></tr>
-            <tr><td colspan="2"><hr></td></tr>
-            <tr><td><strong>Total Course Fee:</strong></td><td class="text-end">₹<?php echo number_format($s['total_fee'], 2); ?></td></tr>
-            <tr><td><strong>Paid Amount:</strong></td><td class="text-end text-success fw-bold">₹<?php echo number_format($s['paid_fee'], 2); ?></td></tr>
-            <tr><td><strong>Payment Mode:</strong></td><td class="text-end"><?php echo $s['payment_mode']; ?></td></tr>
-            <tr><td colspan="2"><hr></td></tr>
-            <tr class="table-light"><td><strong>Pending Balance:</strong></td><td class="text-end text-danger fw-bold">₹<?php echo number_format($s['pending_fee'], 2); ?></td></tr>
-            
-            <?php if ($s['next_installment_amount'] > 0): ?>
-            <tr><td><strong>2nd Installment:</strong></td><td class="text-end fw-bold">₹<?php echo number_format($s['next_installment_amount'], 2); ?></td></tr>
-            <tr><td><small>Due Date:</small></td><td class="text-end small text-muted"><?php echo $s['next_installment_date'] ? date('d M, Y', strtotime($s['next_installment_date'])) : 'N/A'; ?></td></tr>
-            <?php endif; ?>
+<body>
+    <div class="container py-4 no-print text-center">
+        <button onclick="window.print()" class="btn btn-primary px-4 shadow-sm">
+            <i class="fas fa-print me-2"></i>Print Receipt
+        </button>
+        <button onclick="window.close()" class="btn btn-outline-secondary px-4 shadow-sm ms-2">
+            <i class="fas fa-times me-2"></i>Close
+        </button>
+    </div>
 
-            <?php if ($s['third_installment_amount'] > 0): ?>
-            <tr><td><strong>3rd Installment:</strong></td><td class="text-end fw-bold">₹<?php echo number_format($s['third_installment_amount'], 2); ?></td></tr>
-            <tr><td><small>Due Date:</small></td><td class="text-end small text-muted"><?php echo $s['third_installment_date'] ? date('d M, Y', strtotime($s['third_installment_date'])) : 'N/A'; ?></td></tr>
-            <?php endif; ?>
-        </table>
-        
-        <div class="mt-5 d-flex justify-content-between align-items-end">
-            <div class="text-start">
-                <p class="mb-1 small text-muted">Warm regards,</p>
-                <div class="mt-2 mb-1">
-                    <img src="../assets/img/signature.png" alt="Signature" style="max-height: 50px; display: block;" onerror="this.style.display='none'">
-                    <div style="width: 150px; border-bottom: 1px solid #333; margin-bottom: 5px;" class="no-print-border"></div>
-                </div>
-                <h6 class="fw-bold mb-0" style="font-size: 1.1rem;">Sandip Gavit</h6>
-                <p class="small mb-0 text-muted">Founder & CEO</p>
-                <p class="small mb-0 text-muted">TechnoHacks Solutions Pvt. Ltd.</p>
+    <div class="bill-container">
+        <div class="bill-header">
+            <div class="bill-of-supply">
+                <span>BILL OF SUPPLY</span>
+                <div class="original-tag">ORIGINAL FOR RECIPIENT</div>
             </div>
-            <div class="text-center position-relative">
-                <div class="company-stamp">
-                    <img src="../assets/img/stamp.png" alt="Stamp" style="max-height: 100px; opacity: 0.8;" onerror="this.style.display='none'">
-                    <div class="stamp-placeholder no-print" style="width: 100px; height: 100px; border: 2px dashed #ccc; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #ccc;">STAMP HERE</div>
+            <div class="slogan">Let's Grow Together...!!</div>
+        </div>
+
+        <div class="company-section">
+            <div class="company-logo">
+                <img src="../assets/img/logo.png" alt="TechnoHacks">
+            </div>
+            <div class="company-details">
+                <h1>TechnoHacks EduTech</h1>
+                <div class="company-info">
+                    <p>Nashik, Maharashtra 422010, India, Nashik, Maharashtra, 422010</p>
+                    <p><strong>Mobile:</strong> 8208937014</p>
+                    <p><strong>Email:</strong> info@technohacks.co.in</p>
                 </div>
             </div>
         </div>
-        
-        <div class="mt-4 text-center no-print border-top pt-3">
-            <button onclick="window.print()" class="btn btn-success btn-sm">Print Receipt</button>
+
+        <div class="invoice-details-bar">
+            <div class="detail-item"><strong>Invoice No.:</strong> <?php echo $invoice_no; ?></div>
+            <div class="detail-item"><strong>Invoice Date:</strong> <?php echo $invoice_date; ?></div>
+            <div class="detail-item"><strong>Due Date:</strong> <?php echo $due_date; ?></div>
+        </div>
+
+        <div class="bill-to-section">
+            <h6>BILL TO</h6>
+            <div class="customer-name"><?php echo htmlspecialchars($s['full_name']); ?></div>
+            <div class="customer-phone">Student ID: <?php echo $s['student_id']; ?></div>
+        </div>
+
+        <table class="table services-table">
+            <thead>
+                <tr>
+                    <th>SERVICES</th>
+                    <th class="text-end">DISC.</th>
+                    <th class="text-end">AMOUNT</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><?php echo strtoupper($course_name); ?> ( OFFLINE )</td>
+                    <td class="text-end">0.00</td>
+                    <td class="text-end"><?php echo number_format($total_fees, 2); ?></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="subtotal-bar">
+            <span>SUBTOTAL</span>
+            <div class="d-flex gap-5">
+                <span>₹ 0.00</span>
+                <span>₹ <?php echo number_format($total_fees, 2); ?></span>
+            </div>
+        </div>
+
+        <div class="totals-section">
+            <div class="total-row">
+                <div class="total-label">TAXABLE AMOUNT</div>
+                <div class="total-value">₹ <?php echo number_format($total_fees, 2); ?></div>
+            </div>
+            <div class="total-row grand-total">
+                <div class="total-label">TOTAL AMOUNT</div>
+                <div class="total-value">₹ <?php echo number_format($total_fees, 2); ?></div>
+            </div>
+            <div class="total-row">
+                <div class="total-label">Received Amount</div>
+                <div class="total-value">₹ <?php echo number_format($paid_amount, 2); ?></div>
+            </div>
+            <div class="total-row text-danger">
+                <div class="total-label">Pending Balance</div>
+                <div class="total-value">₹ <?php echo number_format($balance, 2); ?></div>
+            </div>
+
+            <div class="amount-in-words">
+                <p>Total Amount (in words)</p>
+                <p class="words"><?php echo numberToWords($total_fees); ?></p>
+            </div>
+        </div>
+
+        <?php if ($s['next_installment_amount'] > 0 || $s['third_installment_amount'] > 0): ?>
+        <div class="installments-section px-5 mb-4">
+            <h6 class="fw-bold text-uppercase border-bottom pb-2 mb-3" style="font-size: 13px; color: #800080;">Upcoming Installment Schedule</h6>
+            <div class="row g-3">
+                <?php if ($s['next_installment_amount'] > 0): ?>
+                <div class="col-6">
+                    <div class="p-3 border rounded bg-light">
+                        <div class="small text-muted mb-1">2nd Installment</div>
+                        <div class="fw-bold fs-5">₹ <?php echo number_format($s['next_installment_amount'], 2); ?></div>
+                        <div class="small text-primary">Due: <?php echo date('d M Y', strtotime($s['next_installment_date'])); ?></div>
+                    </div>
+                </div>
+                <?php endif; ?>
+                <?php if ($s['third_installment_amount'] > 0): ?>
+                <div class="col-6">
+                    <div class="p-3 border rounded bg-light">
+                        <div class="small text-muted mb-1">3rd Installment</div>
+                        <div class="fw-bold fs-5">₹ <?php echo number_format($s['third_installment_amount'], 2); ?></div>
+                        <div class="small text-primary">Due: <?php echo date('d M Y', strtotime($s['third_installment_date'])); ?></div>
+                    </div>
+                </div>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <div class="signature-section">
+
+            <div class="signature-placeholder">
+                <!-- Signature Image Placeholder -->
+                <img src="https://upload.wikimedia.org/wikipedia/commons/3/3a/Jon_Kirsch%27s_Signature.png" class="signature-img" style="opacity: 0.7; filter: grayscale(1);">
+            </div>
+            <div class="signature-label">AUTHORISED SIGNATORY FOR</div>
+            <div class="signature-company">TechnoHacks EduTech</div>
         </div>
     </div>
 </body>
 </html>
+
