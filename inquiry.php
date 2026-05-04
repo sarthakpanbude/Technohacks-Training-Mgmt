@@ -12,19 +12,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $gender = $_POST['gender'];
     $age = $_POST['age'];
     $domain = $_POST['domain'];
+    if ($domain === 'Other' && !empty($_POST['other_domain'])) {
+        $domain = $_POST['other_domain'];
+    }
     $type = $_POST['type'];
     $mode = $_POST['mode'];
     $duration = $_POST['internship_duration'] ?? '';
-    $level = $_POST['course_level'] ?? '';
 
     try {
         $stmt = $pdo->prepare("INSERT INTO inquiries (name, mobile, course, message, status) VALUES (?, ?, ?, ?, 'Successfully Submitted')");
         $msg_body = "Inquiry for $type ($mode)";
         if ($type == 'Internship' && !empty($duration)) {
             $msg_body .= " - Duration: $duration";
-        }
-        if ($type == 'Course' && !empty($level)) {
-            $msg_body .= " - Level: $level";
         }
         $msg_body .= " - Age: $age, Gender: $gender, Email: $email";
         $stmt->execute([$name, $phone, $domain, $msg_body]);
@@ -125,19 +124,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     <input type="number" name="age" class="form-control" placeholder="18" required>
                 </div>
 
-                <div class="col-12">
-                    <label class="form-label small fw-bold">Select Domain</label>
-                    <select name="domain" id="domainSelect" class="form-select" required>
-                        <option value="">Choose your course interest...</option>
+                <div class="col-md-12">
+                    <label class="form-label small fw-bold">Inquiry Type</label>
+                    <select name="type" id="typeSelect" class="form-select bg-light border-0" required onchange="filterDomains()">
+                        <option value="">Select Inquiry Type</option>
+                        <option value="Course">Course Admission</option>
+                        <option value="Internship">Internship Program</option>
                     </select>
                 </div>
 
                 <div class="col-md-6">
-                    <label class="form-label small fw-bold">Inquiry Type</label>
-                    <select name="type" id="typeSelect" class="form-select" required onchange="filterDomains()">
-                        <option value="">Select Inquiry Type</option>
-                        <option value="Course">Course Admission</option>
-                        <option value="Internship">Internship Program</option>
+                    <label class="form-label small fw-bold">Select Domain</label>
+                    <select name="domain" id="domainSelect" class="form-select" required onchange="toggleOtherDomain()">
+                        <option value="">Choose inquiry type first...</option>
                     </select>
                 </div>
 
@@ -150,9 +149,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     </select>
                 </div>
 
+                <div class="col-12" id="otherDomainContainer" style="display: none;">
+                    <label class="form-label small fw-bold text-primary"><i class="fas fa-edit me-1"></i> Specify Your Domain</label>
+                    <input type="text" name="other_domain" id="otherDomainInput" class="form-control border-primary border-opacity-25" placeholder="Enter course/internship name">
+                </div>
+
                 <div class="col-12" id="durationContainer" style="display: none;">
-                    <label class="form-label small fw-bold">Preferred Internship Duration</label>
-                    <select name="internship_duration" id="durationSelect" class="form-select">
+                    <label class="form-label small fw-bold text-success"><i class="fas fa-clock me-1"></i> Preferred Internship Duration</label>
+                    <select name="internship_duration" id="durationSelect" class="form-select border-success border-opacity-25">
                         <option value="">Select Duration</option>
                         <option value="15 Days">15 Days</option>
                         <option value="45 Days">45 Days</option>
@@ -161,16 +165,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         <option value="3 Months">3 Months</option>
                         <option value="4 Months">4 Months</option>
                         <option value="6 Months">6 Months</option>
-                    </select>
-                </div>
-
-                <div class="col-12" id="levelContainer" style="display: none;">
-                    <label class="form-label small fw-bold">Preferred Course Level</label>
-                    <select name="course_level" id="levelSelect" class="form-select">
-                        <option value="">Select Level</option>
-                        <option value="Full Course">Full Course</option>
-                        <option value="Advanced">Advanced</option>
-                        <option value="Small Course">Small Course</option>
                     </select>
                 </div>
 
@@ -186,25 +180,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         const domainSelect = document.getElementById('domainSelect');
                         const durationContainer = document.getElementById('durationContainer');
                         const durationSelect = document.getElementById('durationSelect');
-                        const levelContainer = document.getElementById('levelContainer');
-                        const levelSelect = document.getElementById('levelSelect');
                         
-                        // Hide everything by default
+                        // Hide duration by default
                         durationContainer.style.display = 'none';
                         durationSelect.required = false;
-                        levelContainer.style.display = 'none';
-                        levelSelect.required = false;
 
                         if (type === 'Internship') {
                             durationContainer.style.display = 'block';
                             durationSelect.required = true;
-                        } else if (type === 'Course') {
-                            levelContainer.style.display = 'block';
-                            levelSelect.required = true;
                         }
 
                         const selectedType = type === 'Course' ? 'Training' : 'Internship';
-                        domainSelect.innerHTML = '<option value="">' + (type ? 'Choose your ' + type.toLowerCase() + ' interest...' : 'Choose your course interest...') + '</option>';
+                        domainSelect.innerHTML = '<option value="">' + (type ? 'Choose your ' + type.toLowerCase() + ' interest...' : 'Choose inquiry type first...') + '</option>';
                         
                         if (type) {
                             allDomains.forEach(domain => {
@@ -215,6 +202,30 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                     domainSelect.appendChild(option);
                                 }
                             });
+                            
+                            // Add Other option
+                            const otherOption = document.createElement('option');
+                            otherOption.value = 'Other';
+                            otherOption.textContent = 'Other (Type manually)';
+                            domainSelect.appendChild(otherOption);
+                        }
+                        
+                        // Reset Other Domain view
+                        toggleOtherDomain();
+                    }
+
+                    function toggleOtherDomain() {
+                        const domainSelect = document.getElementById('domainSelect');
+                        const otherContainer = document.getElementById('otherDomainContainer');
+                        const otherInput = document.getElementById('otherDomainInput');
+                        
+                        if (domainSelect.value === 'Other') {
+                            otherContainer.style.display = 'block';
+                            otherInput.required = true;
+                            otherInput.focus();
+                        } else {
+                            otherContainer.style.display = 'none';
+                            otherInput.required = false;
                         }
                     }
 
