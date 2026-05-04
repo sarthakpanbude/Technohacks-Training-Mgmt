@@ -126,7 +126,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['confirm_admission'])) 
         $main_stu_id = $pdo->lastInsertId();
 
         if ($paid > 0) {
-            $rcpt = "RCPT-" . date('Y') . "-" . str_pad($main_stu_id, 4, '0', STR_PAD_LEFT);
+            // Generate a more unique receipt number to avoid duplicates
+            $rcpt = "RCPT-" . date('Y') . "-" . str_pad($main_stu_id, 4, '0', STR_PAD_LEFT) . "-" . rand(10, 99);
             $stmt = $pdo->prepare("INSERT INTO invoices (student_id, receipt_no, amount, payment_mode) VALUES (?, ?, ?, ?)");
             $stmt->execute([$main_stu_id, $rcpt, $paid, $_POST['payment_mode']]);
         }
