@@ -121,10 +121,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['confirm_admission'])) 
             $user_id = $pdo->lastInsertId();
         }
 
-        $stmt = $pdo->prepare("INSERT INTO students (user_id, enrollment_no, dob, phone, address, admission_status) VALUES (?, ?, ?, ?, ?, 'enrolled')");
-        $stmt->execute([$user_id, $student_id, $_POST['dob'], $_POST['mobile'], $_POST['address']]);
+        $stmt = $pdo->prepare("INSERT INTO students (user_id, enrollment_no, dob, phone, address, admission_status, referral_id, course) VALUES (?, ?, ?, ?, ?, 'enrolled', ?, ?)");
+        $stmt->execute([$user_id, $student_id, $_POST['dob'], $_POST['mobile'], $_POST['address'], (!empty($_POST['referral_id']) ? $_POST['referral_id'] : null), $course_name]);
         $main_stu_id = $pdo->lastInsertId();
 
+        // 6. Referral Bonus
+        if (!empty($_POST['referral_id']) && $total > 0) {
+            $bonus = $total * 0.10;
+            $stmt = $pdo->prepare("INSERT INTO referral_bonus (referrer_id, referred_student_id, bonus_amount, status) VALUES (?, ?, ?, 'pending')");
+            $stmt->execute([$_POST['referral_id'], $student_id, $bonus]);
+        }
+
+        // 7. Invoice
         if ($paid > 0) {
             // Generate a more unique receipt number to avoid duplicates
             $rcpt = "RCPT-" . date('Y') . "-" . str_pad($main_stu_id, 4, '0', STR_PAD_LEFT) . "-" . rand(10, 99);
@@ -340,7 +348,6 @@ include '../includes/sidebar.php';
                     </div>
                 </div>
 
-                <!-- Tab 3: Fees & Payment -->
                 <div class="tab-pane fade" id="fees" role="tabpanel">
                     <div class="row g-4">
                         <div class="col-md-6">
@@ -374,6 +381,7 @@ include '../includes/sidebar.php';
                                         <input type="hidden" name="total_fee" id="finalTotalFee">
                                         <span class="fw-bold h4 mb-0 text-primary" id="finalFeeDisplay">₹0.00</span>
                                     </div>
+                                </div>
                                 </div>
                             </div>
                         </div>
@@ -411,6 +419,19 @@ include '../includes/sidebar.php';
                                     <div id="installmentList" class="mt-3 small">
                                         <!-- Dynamic installments list -->
                                     </div>
+                                </div>
+
+                                <div class="mt-4 pt-3 border-top">
+                                    <label class="form-label small fw-bold">Referral Student (Optional)</label>
+                                    <select name="referral_id" class="form-select bg-white">
+                                        <option value="">-- No Referrer --</option>
+                                        <?php
+                                        $referrers = $pdo->query("SELECT s.enrollment_no, u.full_name FROM students s JOIN users u ON s.user_id = u.id WHERE s.admission_status = 'enrolled' OR s.admission_status = 'active' ORDER BY u.full_name ASC")->fetchAll();
+                                        foreach($referrers as $r): ?>
+                                            <option value="<?php echo $r['enrollment_no']; ?>"><?php echo $r['enrollment_no']; ?> - <?php echo htmlspecialchars($r['full_name']); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <small class="text-muted" style="font-size: 0.7rem;">Select the student who referred this new admission.</small>
                                 </div>
                             </div>
                         </div>
@@ -612,6 +633,20 @@ function switchTab(tabId) {
         bootstrap.Tab.getInstance(tabEl) ? bootstrap.Tab.getInstance(tabEl).show() : new bootstrap.Tab(tabEl).show();
     }
 }
+
+document.getElementById('admissionForm').addEventListener('submit', function(e) {
+    if (!this.checkValidity()) {
+        e.preventDefault();
+        const firstInvalid = this.querySelector(':invalid');
+        if (firstInvalid) {
+            const tabPane = firstInvalid.closest('.tab-pane');
+            if (tabPane) {
+                switchTab(tabPane.id + '-tab');
+            }
+            setTimeout(() => firstInvalid.focus(), 200);
+        }
+    }
+});
 
 // Initial call
 document.addEventListener('DOMContentLoaded', () => {

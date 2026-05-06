@@ -323,8 +323,8 @@ $due_date = $s['next_installment_date'] ? date('d/m/Y', strtotime($s['next_insta
             <div class="company-details">
                 <h1>TechnoHacks EduTech</h1>
                 <div class="company-info">
-                    <p>Nashik, Maharashtra 422010, India, Nashik, Maharashtra, 422010</p>
-                    <p><strong>Mobile:</strong> 8208937014</p>
+                    <p>10, 2nd Floor, Devikrupa Apartment, Vidya Vikas Circle, Gangapur Rd, Nashik, Maharashtra 422005</p>
+                    <p><strong>Mobile:</strong> 082089 37014</p>
                     <p><strong>Email:</strong> info@technohacks.co.in</p>
                 </div>
             </div>

@@ -76,24 +76,26 @@ include '../includes/sidebar.php';
                 </thead>
                 <tbody>
                     <?php if (empty($batches)): ?>
-                        <tr><td colspan="6" class="text-center py-4 text-muted">No batches created yet.</td></tr>
-                        <tr><td colspan="7" class="text-center py-4 text-muted">No batches created yet.</td></tr>
+                        <tr><td colspan="7" class="text-center py-5 text-muted">
+                            <i class="fas fa-layer-group fa-3x mb-3 opacity-25"></i>
+                            <p class="mb-0">No batches created yet.</p>
+                        </td></tr>
                     <?php else: ?>
                         <?php foreach ($batches as $b): ?>
                         <tr>
-                            <td class="fw-bold"><?php echo $b['batch_name']; ?></td>
-                            <td><?php echo $b['course_name']; ?></td>
-                            <td><?php echo $b['teacher_name']; ?></td>
-                            <td><?php echo $b['schedule']; ?></td>
-                            <td><?php echo $b['start_time'] ?: 'N/A'; ?></td>
+                            <td class="fw-bold px-3"><?php echo htmlspecialchars($b['batch_name']); ?></td>
+                            <td><?php echo htmlspecialchars($b['course_name']); ?></td>
+                            <td><?php echo htmlspecialchars($b['teacher_name']); ?></td>
+                            <td><?php echo htmlspecialchars($b['schedule']); ?></td>
+                            <td><i class="far fa-clock me-1 text-primary"></i><?php echo $b['start_time'] ?: 'N/A'; ?></td>
                             <td>
-                                <div class="progress" style="height: 6px; width: 100px;">
-                                    <div class="progress-bar" style="width: 20%;"></div>
+                                <div class="progress mb-1" style="height: 6px; width: 100px; border-radius: 10px;">
+                                    <div class="progress-bar bg-primary" style="width: 40%;"></div>
                                 </div>
-                                <span class="small text-muted">12 / <?php echo $b['capacity']; ?></span>
+                                <span class="small text-muted fw-bold">12 / <?php echo $b['capacity']; ?></span>
                             </td>
                             <td>
-                                <span class="badge bg-success bg-opacity-10 text-success rounded-pill text-capitalize"><?php echo $b['status']; ?></span>
+                                <span class="badge bg-success bg-opacity-10 text-success rounded-pill text-capitalize px-3"><?php echo $b['status']; ?></span>
                             </td>
                         </tr>
                         <?php endforeach; ?>

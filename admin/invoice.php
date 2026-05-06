@@ -393,10 +393,10 @@ $due_date = date('d/m/Y', strtotime($payment['payment_date'] . ' + 30 days'));
                 <img src="../assets/img/logo.png" alt="TechnoHacks">
             </div>
             <div class="company-details">
-                <h1>TechnoHacks EduTech</h1>
+                <h1>TechnoHacks Solutions</h1>
                 <div class="company-info">
-                    <p>Nashik, Maharashtra 422010, India, Nashik, Maharashtra, 422010</p>
-                    <p><strong>Mobile:</strong> 8208937014</p>
+                    <p>10, 2nd Floor, Devikrupa Apartment, Vidya Vikas Circle, Gangapur Rd, Nashik, Maharashtra 422005</p>
+                    <p><strong>Mobile:</strong> 082089 37014</p>
                     <p><strong>Email:</strong> info@technohacks.co.in</p>
                 </div>
             </div>
@@ -482,6 +482,22 @@ $due_date = date('d/m/Y', strtotime($payment['payment_date'] . ' + 30 days'));
             </div>
         <?php endif; ?>
 
+        <div class="terms-conditions-box" style="font-size: 10px; color: #555; margin: 20px 40px; padding: 15px; background: #f8f9fa; border: 1px solid #eee; border-radius: 4px;">
+            <h6 style="font-size: 12px; font-weight: 700; color: #800080; margin-bottom: 8px; text-transform: uppercase;">Terms & Conditions</h6>
+            <ol style="padding-left: 15px; margin-bottom: 0; line-height: 1.5;">
+                <li><strong>Refund Policy:</strong> 100% refund if cancelled within 7 days (short courses) or 14 days (full/advanced) from course start. After this period, no refund will be provided.</li>
+                <li>100% refund will be given if the syllabus is not completed due to the institute’s fault.</li>
+                <li><strong>Lifetime access:</strong> Students can join any existing batch again after course completion, free of cost (same course only).</li>
+                <li>Fees must be paid as per plan. Delay may suspend access.</li>
+                <li>Certificate will be issued only after course completion and full fee payment.</li>
+                <li>Students must maintain regular attendance; missed sessions may not be repeated.</li>
+                <li>Batch timings, trainer, or schedule may change if required.</li>
+                <li>The institute is not responsible for any medical issues, injury, or health-related loss during the course.</li>
+                <li>Misconduct or rule violation may lead to termination without refund.</li>
+                <li>Study material is for personal use only; sharing is prohibited.</li>
+            </ol>
+        </div>
+
         <div class="signature-section">
 
             <div class="signature-placeholder">
@@ -490,7 +506,7 @@ $due_date = date('d/m/Y', strtotime($payment['payment_date'] . ' + 30 days'));
                     class="signature-img" style="opacity: 0.7; filter: grayscale(1);">
             </div>
             <div class="signature-label">AUTHORISED SIGNATORY FOR</div>
-            <div class="signature-company">TechnoHacks EduTech</div>
+            <div class="signature-company">TechnoHacks Solutions</div>
         </div>
     </div>
 </body>

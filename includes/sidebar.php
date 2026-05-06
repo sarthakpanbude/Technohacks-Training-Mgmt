@@ -43,6 +43,9 @@ $role = $_SESSION['role'];
             <a href="../admin/reports.php" class="sidebar-link <?php echo $activePage == 'reports' ? 'active' : ''; ?>">
                 <i class="fas fa-chart-bar"></i> Performance Reports
             </a>
+            <a href="../admin/referrals.php" class="sidebar-link <?php echo $activePage == 'referrals' ? 'active' : ''; ?>">
+                <i class="fas fa-users"></i> Referral Program
+            </a>
             <a href="../admin/settings.php" class="sidebar-link <?php echo $activePage == 'settings' ? 'active' : ''; ?>">
                 <i class="fas fa-cog"></i> System Settings
             </a>
@@ -79,6 +82,9 @@ $role = $_SESSION['role'];
             </a>
             <a href="../student/resume.php" class="sidebar-link <?php echo $activePage == 'resume' ? 'active' : ''; ?>">
                 <i class="fas fa-file-pdf"></i> Resume Builder
+            </a>
+            <a href="../student/referrals.php" class="sidebar-link <?php echo $activePage == 'referrals' ? 'active' : ''; ?>">
+                <i class="fas fa-users"></i> Refer & Earn
             </a>
             <a href="../student/profile.php" class="sidebar-link <?php echo $activePage == 'profile' ? 'active' : ''; ?>">
                 <i class="fas fa-user"></i> My Profile
