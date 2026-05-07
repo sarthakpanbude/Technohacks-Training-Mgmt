@@ -89,6 +89,7 @@ $due_date = $s['next_installment_date'] ? date('d/m/Y', strtotime($s['next_insta
             background: #fff;
             padding: 0;
             box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            position: relative;
         }
 
         .bill-header {
@@ -110,11 +111,12 @@ $due_date = $s['next_installment_date'] ? date('d/m/Y', strtotime($s['next_insta
         }
 
         .original-tag {
-            border: 1px solid #ccc;
+            border: 1px solid #800080;
             padding: 2px 8px;
             font-size: 11px;
-            color: #777;
+            color: #800080;
             text-transform: uppercase;
+            font-weight: 700;
         }
 
         .slogan {
@@ -290,28 +292,42 @@ $due_date = $s['next_installment_date'] ? date('d/m/Y', strtotime($s['next_insta
             text-align: center;
         }
 
+        .page-break {
+            page-break-after: always;
+            border-bottom: 2px dashed #ccc;
+            margin: 20px 0;
+        }
+
         @media print {
             body { background: #fff; margin: 0; padding: 0; }
-            .bill-container { box-shadow: none; margin: 0; width: 100%; max-width: 100%; }
+            .bill-container { box-shadow: none; margin: 0; width: 100%; max-width: 100%; border: 1px solid #eee; }
             .no-print { display: none !important; }
+            .page-break { border-bottom: none; }
         }
     </style>
 </head>
 <body>
     <div class="container py-4 no-print text-center">
         <button onclick="window.print()" class="btn btn-primary px-4 shadow-sm">
-            <i class="fas fa-print me-2"></i>Print Receipt
+            <i class="fas fa-print me-2"></i>Print Both Copies
         </button>
         <button onclick="window.close()" class="btn btn-outline-secondary px-4 shadow-sm ms-2">
             <i class="fas fa-times me-2"></i>Close
         </button>
     </div>
 
+    <?php 
+    $copies = [
+        "ORIGINAL FOR STUDENT",
+        "INSTITUTE COPY"
+    ];
+    foreach ($copies as $index => $copy_type): 
+    ?>
     <div class="bill-container">
         <div class="bill-header">
             <div class="bill-of-supply">
                 <span>BILL OF SUPPLY</span>
-                <div class="original-tag">ORIGINAL FOR RECIPIENT</div>
+                <div class="original-tag"><?php echo $copy_type; ?></div>
             </div>
             <div class="slogan">Let's Grow Together...!!</div>
         </div>
@@ -427,6 +443,10 @@ $due_date = $s['next_installment_date'] ? date('d/m/Y', strtotime($s['next_insta
             <div class="signature-company">TechnoHacks EduTech</div>
         </div>
     </div>
+    <?php if ($index == 0): ?>
+        <div class="page-break no-print"></div>
+    <?php endif; ?>
+    <?php endforeach; ?>
 </body>
 </html>
 

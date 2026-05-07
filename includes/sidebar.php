@@ -12,48 +12,43 @@ $role = $_SESSION['role'];
                 <i class="fas fa-th-large"></i> Dashboard
             </a>
             
-            <div class="sidebar-header small text-muted text-uppercase fw-bold mt-4 mb-2 px-3" style="font-size: 0.7rem; letter-spacing: 1px;">Admissions & Leads</div>
-            <a href="../admin/inquiries.php" class="sidebar-link <?php echo $activePage == 'visitors' ? 'active' : ''; ?>">
-                <i class="fas fa-user-plus"></i> Inquiry Management
+            <div class="sidebar-header">ADMISSION DETAILS</div>
+            <a href="../admin/admit.php?new=1" class="sidebar-link <?php echo $activePage == 'visitors' ? 'active' : ''; ?>">
+                <i class="fas fa-user-plus"></i> New Admission
             </a>
-            <a href="../admin/admissions.php" class="sidebar-link <?php echo $activePage == 'admissions' ? 'active' : ''; ?>">
-                <i class="fas fa-clipboard-check"></i> Admission Review
-            </a>
-            <a href="../admin/enrollment_review.php" class="sidebar-link <?php echo $activePage == 'enrollment_review' ? 'active' : ''; ?>">
-                <i class="fas fa-check-double"></i> Enrollment Review
+            <a href="../admin/students.php" class="sidebar-link <?php echo $activePage == 'students' ? 'active' : ''; ?>">
+                <i class="fas fa-user-graduate"></i> Student Profile
             </a>
 
-            <div class="sidebar-header small text-muted text-uppercase fw-bold mt-4 mb-2 px-3" style="font-size: 0.7rem; letter-spacing: 1px;">Academic Management</div>
-            <a href="../admin/students.php" class="sidebar-link <?php echo $activePage == 'students' ? 'active' : ''; ?>">
-                <i class="fas fa-user-graduate"></i> Active Students
-            </a>
+            <div class="sidebar-header">ACADEMIC MANAGEMENT</div>
             <a href="../admin/courses.php" class="sidebar-link <?php echo $activePage == 'courses' ? 'active' : ''; ?>">
                 <i class="fas fa-book"></i> All Courses
             </a>
             <a href="../admin/batches.php" class="sidebar-link <?php echo $activePage == 'batches' ? 'active' : ''; ?>">
-                <i class="fas fa-layer-group"></i> Batch Schedules
+                <i class="fas fa-layer-group"></i> Active Batches
             </a>
-            <div class="sidebar-header small text-muted text-uppercase fw-bold mt-4 mb-2 px-3" style="font-size: 0.7rem; letter-spacing: 1px;">Operations</div>
+
+            <div class="sidebar-header">FINANCE & ACCOUNT</div>
             <a href="../fees/installments.php" class="sidebar-link <?php echo $activePage == 'fees' ? 'active' : ''; ?>">
-                <i class="fas fa-file-invoice-dollar"></i> Fees & Billing
-            </a>
-            <a href="../admin/attendance.php" class="sidebar-link <?php echo $activePage == 'attendance' ? 'active' : ''; ?>">
-                <i class="fas fa-calendar-check"></i> Attendance Tracking
+                <i class="fas fa-file-invoice-dollar"></i> Fees Management
             </a>
             <a href="../admin/reports.php" class="sidebar-link <?php echo $activePage == 'reports' ? 'active' : ''; ?>">
-                <i class="fas fa-chart-bar"></i> Performance Reports
+                <i class="fas fa-chart-bar"></i> Reports and Analytics
             </a>
-            <a href="../admin/referrals.php" class="sidebar-link <?php echo $activePage == 'referrals' ? 'active' : ''; ?>">
-                <i class="fas fa-users"></i> Referral Program
-            </a>
+
+            <div class="sidebar-header">USER SETTINGS</div>
             <a href="../admin/settings.php" class="sidebar-link <?php echo $activePage == 'settings' ? 'active' : ''; ?>">
-                <i class="fas fa-cog"></i> System Settings
+                <i class="fas fa-cog"></i> Settings
+            </a>
+            <a href="../admin/profile.php" class="sidebar-link <?php echo $activePage == 'account' ? 'active' : ''; ?>">
+                <i class="fas fa-user-circle"></i> Account
             </a>
 
         <?php elseif ($role == 'teacher'): ?>
             <a href="../teacher/dashboard.php" class="sidebar-link <?php echo $activePage == 'dashboard' ? 'active' : ''; ?>">
                 <i class="fas fa-th-large"></i> Dashboard
             </a>
+            <div class="sidebar-header">CLASSROOM</div>
             <a href="../teacher/attendance.php" class="sidebar-link <?php echo $activePage == 'attendance' ? 'active' : ''; ?>">
                 <i class="fas fa-calendar-check"></i> Mark Attendance
             </a>
@@ -68,26 +63,19 @@ $role = $_SESSION['role'];
             <a href="../student/dashboard.php" class="sidebar-link <?php echo $activePage == 'dashboard' ? 'active' : ''; ?>">
                 <i class="fas fa-th-large"></i> My Portal
             </a>
+            <div class="sidebar-header">EDUCATION</div>
             <a href="../student/learning.php" class="sidebar-link <?php echo $activePage == 'learning' ? 'active' : ''; ?>">
                 <i class="fas fa-play-circle"></i> Learning Path
             </a>
             <a href="../student/assignments.php" class="sidebar-link <?php echo $activePage == 'assignments' ? 'active' : ''; ?>">
                 <i class="fas fa-edit"></i> Assignments
             </a>
+            <div class="sidebar-header">PERSONAL</div>
             <a href="../student/fees.php" class="sidebar-link <?php echo $activePage == 'fees' ? 'active' : ''; ?>">
                 <i class="fas fa-wallet"></i> Fees & Receipts
             </a>
-            <a href="../student/certificates.php" class="sidebar-link <?php echo $activePage == 'certificates' ? 'active' : ''; ?>">
-                <i class="fas fa-award"></i> My Certificates
-            </a>
-            <a href="../student/resume.php" class="sidebar-link <?php echo $activePage == 'resume' ? 'active' : ''; ?>">
-                <i class="fas fa-file-pdf"></i> Resume Builder
-            </a>
-            <a href="../student/referrals.php" class="sidebar-link <?php echo $activePage == 'referrals' ? 'active' : ''; ?>">
-                <i class="fas fa-users"></i> Refer & Earn
-            </a>
             <a href="../student/profile.php" class="sidebar-link <?php echo $activePage == 'profile' ? 'active' : ''; ?>">
-                <i class="fas fa-user"></i> My Profile
+                <i class="fas fa-user"></i> Account
             </a>
         <?php endif; ?>
     </div>
@@ -99,3 +87,14 @@ $role = $_SESSION['role'];
         </a>
     </div>
 </div>
+
+<style>
+.sidebar-header {
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    margin: 25px 0 10px 15px;
+}
+</style>

@@ -87,6 +87,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     <span class="input-group-text bg-white border-end-0"><i class="fas fa-lock text-muted"></i></span>
                     <input type="password" name="password" class="form-control border-start-0 ps-0" placeholder="••••••••" required>
                 </div>
+                <div class="text-end mt-2">
+                    <a href="#" class="text-decoration-none small text-muted">Forgot Password?</a>
+                </div>
             </div>
             <button type="submit" class="btn btn-dark w-100 py-3 rounded-4 shadow fw-bold">
                 LOGIN TO PORTAL <i class="fas fa-arrow-right ms-2"></i>

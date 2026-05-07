@@ -3,83 +3,125 @@ require_once '../includes/auth.php';
 checkAuth('admin');
 require_once '../config/db.php';
 
-$pageTitle = "Pending Installments";
+$pageTitle = "Fees Management";
 $activePage = "fees";
 
-// Detect pending installments where due_date < today
-$stmt = $pdo->query("SELECT i.*, u.full_name, s.enrollment_no 
-                     FROM installments i 
-                     JOIN students s ON i.student_id = s.id 
+// Fetch Students with their fee details
+$stmt = $pdo->query("SELECT s.id as student_real_id, s.enrollment_no, u.full_name, s.course, 
+                            sf.total_fee, sf.pending_fee, sf.installments as total_installments,
+                            (SELECT COUNT(*) FROM installments WHERE student_id = s.id AND status = 'Paid') as paid_count
+                     FROM students s 
                      JOIN users u ON s.user_id = u.id 
-                     WHERE i.status = 'Pending' 
-                     ORDER BY i.due_date ASC");
-$installments = $stmt->fetchAll();
+                     JOIN student_fees sf ON s.enrollment_no = sf.student_id
+                     ORDER BY s.created_at DESC");
+$fees_data = $stmt->fetchAll();
 
 include '../includes/header.php';
 include '../includes/sidebar.php';
 ?>
 
-<main class="main-content w-100">
+<main class="main-content w-100 p-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold mb-0">Pending Installments</h2>
-        <a href="add_fees.php" class="btn btn-primary"><i class="fas fa-plus me-2"></i>Assign New Fees</a>
+        <div>
+            <h2 class="fw-bold mb-0">Fees Management</h2>
+            <p class="text-muted small">Monitor student payments, pending balances, and installment plans.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="../admin/fees.php" class="btn btn-outline-primary rounded-pill px-4 shadow-sm">
+                <i class="fas fa-history me-2"></i>Payment History
+            </a>
+        </div>
     </div>
 
-    <div class="stat-card">
-        <?php if (empty($installments)): ?>
-            <div class="text-center py-5">
-                <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
-                <h5 class="fw-bold">All clear!</h5>
-                <p class="text-muted">No pending installments found.</p>
-            </div>
-        <?php else: ?>
-            <div class="table-responsive">
-                <table class="table table-hover align-middle">
-                    <thead class="bg-light">
+    <div class="stat-card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-bordered align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="px-4 py-3 text-muted small text-uppercase fw-bold">Student ID</th>
+                        <th class="py-3 text-muted small text-uppercase fw-bold">Student Name</th>
+                        <th class="py-3 text-muted small text-uppercase fw-bold">Course Name</th>
+                        <th class="py-3 text-muted small text-uppercase fw-bold">Total Fees</th>
+                        <th class="py-3 text-muted small text-uppercase fw-bold">Remaining Fees</th>
+                        <th class="py-3 text-muted small text-uppercase fw-bold">Installment</th>
+                        <th class="px-4 py-3 text-muted small text-uppercase fw-bold text-center">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($fees_data)): ?>
                         <tr>
-                            <th class="border-0">Student</th>
-                            <th class="border-0">Installment No</th>
-                            <th class="border-0">Amount</th>
-                            <th class="border-0">Due Date</th>
-                            <th class="border-0">Status</th>
-                            <th class="border-0 text-end">Action</th>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="fas fa-money-bill-wave d-block mb-2 h3 opacity-50"></i>
+                                No fee records found.
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($installments as $inst): 
-                            $is_overdue = (strtotime($inst['due_date']) < strtotime(date('Y-m-d')));
+                    <?php else: ?>
+                        <?php foreach ($fees_data as $f): 
+                            $pending_color = ($f['pending_fee'] > 0) ? 'text-danger' : 'text-success';
                         ?>
-                        <tr>
-                            <td>
-                                <div class="fw-bold"><?php echo htmlspecialchars($inst['full_name']); ?></div>
-                                <div class="small text-muted"><?php echo $inst['enrollment_no'] ?? 'N/A'; ?></div>
-                            </td>
-                            <td><?php echo $inst['installment_no']; ?></td>
-                            <td class="fw-bold text-primary">₹<?php echo number_format($inst['amount'], 2); ?></td>
-                            <td>
-                                <span class="<?php echo $is_overdue ? 'text-danger fw-bold' : 'text-muted'; ?>">
-                                    <?php echo date('d M Y', strtotime($inst['due_date'])); ?>
-                                </span>
-                            </td>
-                            <td>
-                                <?php if ($is_overdue): ?>
-                                    <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill">Overdue</span>
-                                <?php else: ?>
-                                    <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill">Pending</span>
-                                <?php endif; ?>
-                            </td>
-                            <td class="text-end">
-                                <a href="payment.php?installment_id=<?php echo $inst['id']; ?>" class="btn btn-sm btn-success">
-                                    <i class="fas fa-money-bill-wave me-1"></i>Pay Now
-                                </a>
-                            </td>
-                        </tr>
+                            <tr>
+                                <td class="px-4">
+                                    <span class="fw-bold text-dark"><?php echo htmlspecialchars($f['enrollment_no']); ?></span>
+                                </td>
+                                <td class="fw-bold text-dark"><?php echo htmlspecialchars($f['full_name']); ?></td>
+                                <td>
+                                    <span class="badge bg-purple-light text-purple rounded px-2 py-1 small">
+                                        <?php echo htmlspecialchars($f['course'] ?? 'N/A'); ?>
+                                    </span>
+                                </td>
+                                <td class="fw-bold">₹<?php echo number_format($f['total_fee'], 2); ?></td>
+                                <td class="fw-bold <?php echo $pending_color; ?>">
+                                    ₹<?php echo number_format($f['pending_fee'], 2); ?>
+                                </td>
+                                <td>
+                                    <div class="small fw-bold text-muted">
+                                        <?php echo $f['paid_count']; ?> / <?php echo $f['total_installments']; ?> Paid
+                                    </div>
+                                    <div class="progress mt-1" style="height: 6px; width: 80px;">
+                                        <?php 
+                                        $percent = ($f['total_installments'] > 0) ? ($f['paid_count'] / $f['total_installments']) * 100 : 0;
+                                        ?>
+                                        <div class="progress-bar bg-success" role="progressbar" style="width: <?php echo $percent; ?>%"></div>
+                                    </div>
+                                </td>
+                                <td class="px-4 text-center">
+                                    <a href="../admin/generate_receipt.php?id=<?php echo $f['enrollment_no']; ?>" 
+                                       class="btn btn-outline-success btn-sm rounded px-3 shadow-sm">
+                                        <i class="fas fa-receipt me-2"></i>View Fees Receipt
+                                    </a>
+                                </td>
+                            </tr>
                         <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        <?php endif; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
     </div>
 </main>
+
+<style>
+    .bg-purple-light { background-color: rgba(128, 0, 128, 0.08); }
+    .text-purple { color: #800080; }
+    .stat-card {
+        background: white;
+        border-radius: 15px;
+        border: 1px solid #eee;
+    }
+    .table thead th {
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+        background: #fdfdfd;
+        border-bottom: 2px solid #eee !important;
+    }
+    .table tbody td {
+        padding: 18px 15px !important;
+        border-bottom: 1px solid #f0f0f0 !important;
+    }
+    .progress {
+        background-color: #f0f0f0;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+</style>
 
 <?php include '../includes/footer.php'; ?>

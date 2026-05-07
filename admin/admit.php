@@ -78,8 +78,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['confirm_admission'])) 
         $course_name = $_POST['course_type'] == 'Other' ? $_POST['other_course'] : $_POST['course'];
 
         // 1. Basic & Personal (Providing defaults for removed fields to prevent DB errors)
-        $stmt = $pdo->prepare("INSERT INTO students_basic (student_id, full_name, father_name, mother_name, dob, gender, email, course) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$student_id, $_POST['full_name'], '', '', $_POST['dob'], $_POST['gender'], $_POST['email'], $course_name]);
+        $stmt = $pdo->prepare("INSERT INTO students_basic (student_id, full_name, father_name, mother_name, dob, gender, email, course, start_date, duration) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$student_id, $_POST['full_name'], '', '', $_POST['dob'], $_POST['gender'], $_POST['email'], $course_name, $_POST['start_date'], $_POST['duration']]);
 
         $stmt = $pdo->prepare("INSERT INTO personal_details (student_id, category, nationality, address, permanent_address, city, state) VALUES (?, ?, ?, ?, ?, ?, ?)");
         $stmt->execute([$student_id, 'General', 'Indian', $_POST['address'], $_POST['permanent_address'], $_POST['city'], $_POST['state']]);
@@ -138,6 +138,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['confirm_admission'])) 
             $rcpt = "RCPT-" . date('Y') . "-" . str_pad($main_stu_id, 4, '0', STR_PAD_LEFT) . "-" . rand(10, 99);
             $stmt = $pdo->prepare("INSERT INTO invoices (student_id, receipt_no, amount, payment_mode) VALUES (?, ?, ?, ?)");
             $stmt->execute([$main_stu_id, $rcpt, $paid, $_POST['payment_mode']]);
+        }
+
+        // 8. Save Installments
+        if (isset($_POST['inst_amounts']) && is_array($_POST['inst_amounts'])) {
+            $stmt = $pdo->prepare("INSERT INTO installments (student_id, installment_no, amount, due_date, status) VALUES (?, ?, ?, ?, 'Pending')");
+            foreach ($_POST['inst_amounts'] as $i => $amt) {
+                if ($amt > 0) {
+                    $stmt->execute([$main_stu_id, ($i + 2), $amt, $_POST['inst_dates'][$i]]);
+                }
+            }
+        }
+        // Also record the first payment as the first installment (Paid)
+        if ($paid > 0) {
+            $stmt = $pdo->prepare("INSERT INTO installments (student_id, installment_no, amount, due_date, status) VALUES (?, 1, ?, ?, 'Paid')");
+            $stmt->execute([$main_stu_id, $paid, $_POST['start_date']]);
         }
 
         if (isset($inquiry_id) && $inquiry_id > 0) {
@@ -312,6 +327,10 @@ include '../includes/sidebar.php';
                         <div class="col-md-4">
                             <label class="form-label small fw-bold">Course Start Date</label>
                             <input type="date" name="start_date" id="startDate" class="form-control" value="<?php echo date('Y-m-d'); ?>" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Course Duration</label>
+                            <input type="text" name="duration" class="form-control" placeholder="e.g. 6 months" required>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label small fw-bold">Profile Photo</label>

@@ -25,19 +25,20 @@ while($row = $enrollmentQuery->fetch()) {
 }
 $chartData = json_encode(array_values($monthlyEnrollments));
 
-$page = $_GET['page'] ?? 'dashboard';
-if ($page == 'inquiry' || $page == 'add_inquiry') $activePage = 'visitors';
-
-// Handle Manual Inquiry Submission
-if (isset($_POST['add_manual_inquiry'])) {
-    $stmt = $pdo->prepare("INSERT INTO visitors (name, phone, email, gender, age, course_interest, type, mode, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'new')");
-    $stmt->execute([$_POST['name'], $_POST['phone'], $_POST['email'], $_POST['gender'], $_POST['age'], $_POST['domain'], $_POST['type'], $_POST['mode']]);
-    header("Location: dashboard.php?page=inquiry&msg=Inquiry Added");
-    exit;
+// Handle Student ID Search
+$searchStudent = null;
+if (isset($_GET['search_id']) && !empty($_GET['search_id'])) {
+    $search_id = $_GET['search_id'];
+    $stmt = $pdo->prepare("SELECT s.*, u.full_name, u.email, sf.total_fee, sf.pending_fee 
+                          FROM students s 
+                          JOIN users u ON s.user_id = u.id 
+                          JOIN student_fees sf ON s.enrollment_no = sf.student_id 
+                          WHERE s.enrollment_no = ?");
+    $stmt->execute([$search_id]);
+    $searchStudent = $stmt->fetch();
 }
 
-// Fetch Recent Inquiries (Merged from remote)
-$recentInquiries = $pdo->query("SELECT * FROM visitors ORDER BY created_at DESC LIMIT 5")->fetchAll();
+$page = $_GET['page'] ?? 'dashboard';
 
 include '../includes/header.php';
 include '../includes/sidebar.php';
@@ -46,10 +47,57 @@ include '../includes/sidebar.php';
 <main class="main-content w-100 p-4">
     <?php include '../includes/topbar.php'; ?>
     
-    <div class="d-flex justify-content-end gap-2 mb-3 no-print">
-        <a href="export_students.php" class="btn btn-sm btn-outline-success rounded-pill px-3"><i class="fas fa-file-excel me-1"></i> Export Students</a>
-        <a href="export_fees.php" class="btn btn-sm btn-outline-danger rounded-pill px-3"><i class="fas fa-file-pdf me-1"></i> Export Fees</a>
+    <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+        <form action="" method="GET" class="d-flex gap-2" style="width: 400px;">
+            <input type="text" name="search_id" class="form-control form-control-sm border shadow-sm px-3" 
+                   placeholder="Quick Student Search (ID)..." 
+                   style="border-radius: 20px;"
+                   value="<?php echo htmlspecialchars($_GET['search_id'] ?? ''); ?>">
+            <button type="submit" class="btn btn-purple btn-sm rounded-pill px-3 shadow-sm">Search</button>
+        </form>
+        <div class="d-flex gap-2">
+            <a href="export_students.php" class="btn btn-sm btn-outline-success rounded-pill px-3 shadow-sm"><i class="fas fa-file-excel me-1"></i> Export Students</a>
+            <a href="export_fees.php" class="btn btn-sm btn-outline-danger rounded-pill px-3 shadow-sm"><i class="fas fa-file-pdf me-1"></i> Export Fees</a>
+        </div>
     </div>
+
+    <!-- Search Result Section - Overlay Style -->
+    <?php if (isset($_GET['search_id']) && !empty($_GET['search_id'])): ?>
+        <?php if ($searchStudent): ?>
+            <div class="stat-card border-0 shadow-lg mb-4 animate__animated animate__fadeInDown" style="border-top: 4px solid #800080 !important; background: #fdfdfd; border-radius: 12px;">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold mb-0 text-purple"><i class="fas fa-id-card me-2"></i>STUDENT DATA: <?php echo htmlspecialchars($searchStudent['enrollment_no']); ?></h6>
+                    <a href="dashboard.php" class="btn-close btn-sm"></a>
+                </div>
+                <div class="row g-3 align-items-center">
+                    <div class="col-md-3">
+                        <div class="text-muted x-small fw-bold text-uppercase mb-1" style="font-size: 0.65rem;">Name</div>
+                        <div class="fw-bold text-dark"><?php echo htmlspecialchars($searchStudent['full_name']); ?></div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-muted x-small fw-bold text-uppercase mb-1" style="font-size: 0.65rem;">Course</div>
+                        <div class="fw-bold text-dark"><?php echo htmlspecialchars($searchStudent['course']); ?></div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-muted x-small fw-bold text-uppercase mb-1" style="font-size: 0.65rem;">Fees (Total/Pending)</div>
+                        <div>
+                            <span class="fw-bold">₹<?php echo number_format($searchStudent['total_fee'], 2); ?></span> / 
+                            <span class="text-danger fw-bold">₹<?php echo number_format($searchStudent['pending_fee'], 2); ?></span>
+                        </div>
+                    </div>
+                    <div class="col-md-3 text-end">
+                        <a href="generate_form.php?id=<?php echo $searchStudent['enrollment_no']; ?>" class="btn btn-purple btn-sm px-3 shadow-sm">Form</a>
+                        <a href="generate_receipt.php?id=<?php echo $searchStudent['id']; ?>" class="btn btn-outline-success btn-sm px-3 shadow-sm">Receipt</a>
+                    </div>
+                </div>
+            </div>
+        <?php else: ?>
+            <div class="alert alert-warning py-2 border-0 shadow-sm mb-4 d-flex justify-content-between align-items-center" style="border-radius: 10px;">
+                <span><i class="fas fa-exclamation-circle me-2"></i> ID <strong><?php echo htmlspecialchars($_GET['search_id']); ?></strong> not found.</span>
+                <a href="dashboard.php" class="btn-close btn-sm"></a>
+            </div>
+        <?php endif; ?>
+    <?php endif; ?>
 
     <?php if ($page == 'dashboard'): ?>
 
@@ -143,141 +191,6 @@ include '../includes/sidebar.php';
             </div>
         </div>
 
-    <?php elseif ($page == 'inquiry'): ?>
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4 class="fw-bold mb-0">Inquiry Management</h4>
-            <div class="d-flex gap-2">
-                <a href="dashboard.php?page=add_inquiry" class="btn btn-primary rounded-pill px-4"><i class="fas fa-plus me-2"></i>Add New Inquiry</a>
-                <form class="d-flex gap-2" method="GET">
-                    <input type="hidden" name="page" value="inquiry">
-                    <input type="text" name="search" class="form-control form-control-sm" placeholder="Search..." value="<?php echo $_GET['search'] ?? ''; ?>" style="border-radius: 8px;">
-                    <button type="submit" class="btn btn-primary btn-sm px-3 rounded-pill">Search</button>
-                </form>
-            </div>
-        </div>
-        
-        <div class="stat-card bg-white rounded-4 shadow-sm border-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="bg-light">
-                        <tr>
-                            <th class="px-4">Name</th>
-                            <th>Mobile</th>
-                            <th>Course</th>
-                            <th>Date</th>
-                            <th class="text-end px-4">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php
-                        $search = $_GET['search'] ?? '';
-                        
-                        // Unified Query for Dashboard
-                        $q1 = "SELECT id, name, mobile as phone, course, created_at, 'inquiry' as source FROM inquiries WHERE status NOT IN ('admitted', 'deleted')";
-                        $q2 = "SELECT id, name, phone, course_interest as course, created_at, 'visitor' as source FROM visitors WHERE status NOT IN ('converted', 'rejected')";
-                        
-                        if ($search) {
-                            $q1 .= " AND (name LIKE ? OR mobile LIKE ? OR course LIKE ?)";
-                            $q2 .= " AND (name LIKE ? OR phone LIKE ? OR course_interest LIKE ?)";
-                            $params = ["%$search%", "%$search%", "%$search%", "%$search%", "%$search%", "%$search%"];
-                        } else {
-                            $params = [];
-                        }
-
-                        $inqs_data = $pdo->prepare($q1);
-                        $inqs_data->execute(array_slice($params, 0, 3));
-                        $res1 = $inqs_data->fetchAll();
-
-                        $vis_data = $pdo->prepare($q2);
-                        $vis_data->execute(array_slice($params, 3, 3));
-                        $res2 = $vis_data->fetchAll();
-
-                        $combined = array_merge($res1, $res2);
-                        usort($combined, function($a, $b) { return strtotime($b['created_at']) - strtotime($a['created_at']); });
-
-                        foreach ($combined as $inq):
-                        ?>
-                        <tr>
-                            <td class="px-4 fw-bold">
-                                <?php echo htmlspecialchars($inq['name']); ?>
-                                <br><small class="text-muted" style="font-size: 0.6rem;"><?php echo strtoupper($inq['source']); ?></small>
-                            </td>
-                            <td><?php echo htmlspecialchars($inq['phone']); ?></td>
-                            <td><span class="badge bg-info bg-opacity-10 text-info rounded-pill px-3"><?php echo htmlspecialchars($inq['course']); ?></span></td>
-                            <td class="small text-muted"><?php echo date('d M, Y', strtotime($inq['created_at'])); ?></td>
-                            <td class="text-end px-4">
-                                <a href="admit.php?id=<?php echo $inq['id']; ?>&source=<?php echo $inq['source']; ?>&new=1" class="btn btn-sm btn-success rounded-pill px-3">Admit</a>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-    <?php elseif ($page == 'add_inquiry'): ?>
-        <div class="mb-4">
-            <h4 class="fw-bold mb-0">Add New Inquiry</h4>
-            <p class="text-muted small">Enter student details manually.</p>
-        </div>
-        <div class="stat-card bg-white rounded-4 shadow-sm border-0 p-4" style="max-width: 800px;">
-            <form action="" method="POST">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label small fw-bold">Full Name</label>
-                        <input type="text" name="name" class="form-control" required>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label small fw-bold">Phone Number</label>
-                        <input type="tel" name="phone" class="form-control" required>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label small fw-bold">Email Address</label>
-                        <input type="email" name="email" class="form-control">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label small fw-bold">Gender</label>
-                        <select name="gender" class="form-select" required>
-                            <option value="Male">Male</option>
-                            <option value="Female">Female</option>
-                            <option value="Other">Other</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label small fw-bold">Age</label>
-                        <input type="number" name="age" class="form-control" required>
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label small fw-bold">Select Domain</label>
-                        <select name="domain" class="form-select" required>
-                            <?php
-                            $courses = $pdo->query("SELECT course_name FROM courses ORDER BY course_name ASC")->fetchAll();
-                            foreach($courses as $c) echo "<option value='{$c['course_name']}'>{$c['course_name']}</option>";
-                            ?>
-                        </select>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label small fw-bold">Inquiry Type</label>
-                        <select name="type" class="form-select" required>
-                            <option value="Course">Course Admission</option>
-                            <option value="Internship">Internship Program</option>
-                        </select>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label small fw-bold">Preferred Mode</label>
-                        <select name="mode" class="form-select" required>
-                            <option value="Online">Online (Virtual)</option>
-                            <option value="Offline">Offline (At Center)</option>
-                        </select>
-                    </div>
-                    <div class="col-12 mt-4 pt-3 border-top">
-                        <button type="submit" name="add_manual_inquiry" class="btn btn-primary px-5 rounded-pill">Save Inquiry</button>
-                        <a href="dashboard.php?page=inquiry" class="btn btn-light px-4 border rounded-pill">Cancel</a>
-                    </div>
-                </div>
-            </form>
-        </div>
     <?php endif; ?>
 </main>
 
@@ -318,4 +231,11 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
+<style>
+    .btn-purple { background-color: #800080; color: white; border: none; }
+    .btn-purple:hover { background-color: #660066; color: white; }
+    .text-purple { color: #800080; }
+    .stat-card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+    .animate__animated { animation-duration: 0.5s; }
+</style>
 <?php include '../includes/footer.php'; ?>
