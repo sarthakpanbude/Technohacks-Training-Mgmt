@@ -1,0 +1,167 @@
+<?php
+require_once '../includes/auth.php';
+checkAuth('admin');
+require_once '../config/db.php';
+
+$pageTitle = "Batch Management";
+$activePage = "batches";
+
+// Fetch Teachers & Courses for dropdowns
+$teachers = $pdo->query("SELECT t.id, u.full_name FROM teachers t JOIN users u ON t.user_id = u.id")->fetchAll();
+$courses = $pdo->query("SELECT id, course_name FROM courses")->fetchAll();
+
+// Handle Add Batch
+if (isset($_POST['add_batch'])) {
+    $course_id = $_POST['course_id'];
+    $teacher_name = trim($_POST['teacher_name']);
+    $name = $_POST['batch_name'];
+    $schedule = $_POST['schedule'];
+    $start_time = $_POST['start_time'] ?? '';
+    $capacity = $_POST['capacity'];
+    $start_date = $_POST['start_date'];
+
+    // Resolve or create teacher
+    $stmt = $pdo->prepare("SELECT t.id FROM teachers t JOIN users u ON t.user_id = u.id WHERE u.full_name = ? LIMIT 1");
+    $stmt->execute([$teacher_name]);
+    $teacher = $stmt->fetch();
+
+    if ($teacher) {
+        $teacher_id = $teacher['id'];
+    } else {
+        // Create new teacher
+        $username = strtolower(str_replace(' ', '_', $teacher_name)) . rand(1000, 9999);
+        $password = password_hash('password123', PASSWORD_DEFAULT);
+        $email = $username . '@technohacks.com';
+        
+        $stmt = $pdo->prepare("INSERT INTO users (username, password, role, email, full_name) VALUES (?, ?, 'teacher', ?, ?)");
+        $stmt->execute([$username, $password, $email, $teacher_name]);
+        $user_id = $pdo->lastInsertId();
+        
+        $stmt = $pdo->prepare("INSERT INTO teachers (user_id) VALUES (?)");
+        $stmt->execute([$user_id]);
+        $teacher_id = $pdo->lastInsertId();
+    }
+
+    $stmt = $pdo->prepare("INSERT INTO batches (course_id, teacher_id, batch_name, schedule, start_time, capacity, start_date) VALUES (?, ?, ?, ?, ?, ?, ?)");
+    $stmt->execute([$course_id, $teacher_id, $name, $schedule, $start_time, $capacity, $start_date]);
+    header("Location: batches.php?msg=Batch Created");
+    exit;
+}
+
+$batches = $pdo->query("SELECT b.*, c.course_name, u.full_name as teacher_name FROM batches b JOIN courses c ON b.course_id = c.id JOIN teachers t ON b.teacher_id = t.id JOIN users u ON t.user_id = u.id ORDER BY b.id DESC")->fetchAll();
+
+include '../includes/header.php';
+include '../includes/sidebar.php';
+?>
+
+<main class="main-content w-100">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold">Batches</h2>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addBatchModal"><i class="fas fa-plus me-2"></i>Create Batch</button>
+    </div>
+
+    <div class="stat-card">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="border-0">Batch Name</th>
+                        <th class="border-0">Course</th>
+                        <th class="border-0">Teacher</th>
+                        <th class="border-0">Schedule</th>
+                        <th class="border-0">Timing</th>
+                        <th class="border-0">Capacity</th>
+                        <th class="border-0">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($batches)): ?>
+                        <tr><td colspan="7" class="text-center py-5 text-muted">
+                            <i class="fas fa-layer-group fa-3x mb-3 opacity-25"></i>
+                            <p class="mb-0">No batches created yet.</p>
+                        </td></tr>
+                    <?php else: ?>
+                        <?php foreach ($batches as $b): ?>
+                        <tr>
+                            <td class="fw-bold px-3"><?php echo htmlspecialchars($b['batch_name']); ?></td>
+                            <td><?php echo htmlspecialchars($b['course_name']); ?></td>
+                            <td><?php echo htmlspecialchars($b['teacher_name']); ?></td>
+                            <td><?php echo htmlspecialchars($b['schedule']); ?></td>
+                            <td><i class="far fa-clock me-1 text-primary"></i><?php echo $b['start_time'] ?: 'N/A'; ?></td>
+                            <td>
+                                <div class="progress mb-1" style="height: 6px; width: 100px; border-radius: 10px;">
+                                    <div class="progress-bar bg-primary" style="width: 40%;"></div>
+                                </div>
+                                <span class="small text-muted fw-bold">12 / <?php echo $b['capacity']; ?></span>
+                            </td>
+                            <td>
+                                <span class="badge bg-success bg-opacity-10 text-success rounded-pill text-capitalize px-3"><?php echo $b['status']; ?></span>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="addBatchModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">New Batch</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="" method="POST">
+                    <div class="modal-body p-4">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Select Course</label>
+                            <select name="course_id" class="form-select" required>
+                                <?php foreach ($courses as $c): ?>
+                                    <option value="<?php echo $c['id']; ?>"><?php echo $c['course_name']; ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Teacher Name</label>
+                            <input type="text" name="teacher_name" class="form-control" list="teacherList" placeholder="Type or select a teacher..." required>
+                            <datalist id="teacherList">
+                                <?php foreach ($teachers as $t): ?>
+                                    <option value="<?php echo htmlspecialchars($t['full_name']); ?>">
+                                <?php endforeach; ?>
+                            </datalist>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Batch Name (e.g. WD-Morning-2024)</label>
+                            <input type="text" name="batch_name" class="form-control" required>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label small fw-bold">Days (e.g. Mon-Fri)</label>
+                                <input type="text" name="schedule" class="form-control" placeholder="Mon-Fri" required>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label small fw-bold">Timing (e.g. 10AM)</label>
+                                <input type="text" name="start_time" class="form-control" placeholder="10:00 AM" required>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label small fw-bold">Capacity</label>
+                                <input type="number" name="capacity" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Start Date</label>
+                            <input type="date" name="start_date" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0 pt-0">
+                        <button type="submit" name="add_batch" class="btn btn-primary w-100">Create Batch</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</main>
+
+<?php include '../includes/footer.php'; ?>
