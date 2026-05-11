@@ -16,7 +16,7 @@ if (!$s) {
 }
 
 // Fetch Discount info if available
-$stmt = $pdo->prepare("SELECT * FROM referral_bonuses WHERE referred_id = (SELECT id FROM students WHERE enrollment_no = ?)");
+$stmt = $pdo->prepare("SELECT * FROM referral_bonuses WHERE referred_id = ?");
 $stmt->execute([$student_id]);
 $discount_info = $stmt->fetch();
 
@@ -437,17 +437,23 @@ if ($installment_data) {
 
         <div class="totals-section">
             <div class="total-row">
-                <div class="total-label">TAXABLE AMOUNT</div>
-                <div class="total-value">₹ <?php echo number_format($discount_info ? $discount_info['original_fee'] : $total_fees, 2); ?></div>
+                <div class="total-label">STANDARD COURSE FEE</div>
+                <div class="total-value">₹ <?php echo number_format($s['standard_fee'] > 0 ? $s['standard_fee'] : $total_fees, 2); ?></div>
             </div>
-            <?php if ($discount_info && $discount_info['discount_amount'] > 0): ?>
+            <?php if ($s['other_discount'] > 0): ?>
             <div class="total-row text-primary">
-                <div class="total-label">DISCOUNT APPLIED</div>
+                <div class="total-label">SPECIAL DISCOUNT</div>
+                <div class="total-value">- ₹ <?php echo number_format($s['other_discount'], 2); ?></div>
+            </div>
+            <?php endif; ?>
+            <?php if ($discount_info && $discount_info['discount_amount'] > 0): ?>
+            <div class="total-row text-success">
+                <div class="total-label">REFERRAL DISCOUNT</div>
                 <div class="total-value">- ₹ <?php echo number_format($discount_info['discount_amount'], 2); ?></div>
             </div>
             <?php endif; ?>
             <div class="total-row grand-total">
-                <div class="total-label">TOTAL COURSE FEE</div>
+                <div class="total-label">TOTAL PAYABLE FEE</div>
                 <div class="total-value">₹ <?php echo number_format($total_fees, 2); ?></div>
             </div>
             <?php if ($installment_data): ?>
@@ -511,6 +517,17 @@ if ($installment_data) {
             <div class="signature-label">AUTHORISED SIGNATORY FOR</div>
             <div class="signature-company">TechnoHacks Solutions</div>
         </div>
+        
+        <?php if ($discount_info && $discount_info['refund_expiry_date']): ?>
+        <div class="refund-note px-5 pb-4">
+            <div class="p-2 border rounded bg-light small" style="border-left: 4px solid #ef4444 !important;">
+                <i class="fas fa-info-circle text-danger me-2"></i>
+                <strong>Refund Policy Note:</strong> 
+                Refund period will be active till <strong><?php echo date('d M Y', strtotime($discount_info['refund_expiry_date'])); ?></strong>. 
+                After that, refund will not be given.
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
     <?php if ($index == 0): ?>
         <div class="page-break no-print"></div>

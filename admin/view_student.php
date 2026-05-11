@@ -125,6 +125,9 @@ include '../includes/header.php';
         color: #6c757d;
         border: 1px solid transparent;
         margin: 0 2px;
+        white-space: nowrap;
+        font-size: 0.85rem;
+        padding: 8px 15px !important;
     }
 </style>
 <?php
@@ -227,8 +230,8 @@ include '../includes/sidebar.php';
 
         <!-- Details -->
         <div class="col-md-8">
-            <div class="stat-card mb-4 border-0 shadow-sm">
-                <ul class="nav nav-pills nav-fill mb-4 bg-light p-2 rounded-3" id="profileDetailTabs" role="tablist">
+            <div class="stat-card mb-4 border-0 shadow-sm p-3">
+                <ul class="nav nav-pills mb-4 bg-light p-2 rounded-3 flex-nowrap overflow-x-auto custom-scrollbar" id="profileDetailTabs" role="tablist">
                     <li class="nav-item">
                         <button class="nav-link active fw-bold py-2" data-bs-toggle="tab" data-bs-target="#fee-info" type="button">
                             <i class="fas fa-money-check-alt me-2"></i>Installments

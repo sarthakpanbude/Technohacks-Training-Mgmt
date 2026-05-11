@@ -77,8 +77,8 @@ include '../includes/sidebar.php';
             <a href="export_students.php" class="btn btn-sm rounded-pill px-3" style="font-size:0.85rem;border:1px solid var(--success);color:var(--success);background:rgba(16,185,129,0.06);">
                 <i class="fas fa-file-excel me-1"></i>Export Students
             </a>
-            <a href="export_fees.php" class="btn btn-sm rounded-pill px-3" style="font-size:0.85rem;border:1px solid var(--danger);color:var(--danger);background:rgba(239,68,68,0.06);">
-                <i class="fas fa-file-pdf me-1"></i>Export Fees
+            <a href="export_fees.php" class="btn btn-sm rounded-pill px-3" style="font-size:0.85rem;border:1px solid var(--success);color:var(--success);background:rgba(16,185,129,0.06);">
+                <i class="fas fa-file-excel me-1"></i>Export Fees
             </a>
         </div>
     </div>

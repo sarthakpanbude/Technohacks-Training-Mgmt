@@ -3,59 +3,74 @@ require_once '../includes/auth.php';
 checkAuth('admin');
 require_once '../config/db.php';
 
-$fees = $pdo->query("SELECT s.enrollment_no, u.full_name, sf.total_fee, sf.paid_fee, sf.pending_fee, sf.payment_mode 
-                     FROM student_fees sf 
-                     JOIN students_basic sb ON sf.student_id = sb.student_id
-                     JOIN students s ON sb.student_id = s.enrollment_no
-                     JOIN users u ON s.user_id = u.id")->fetchAll();
+// Fetch fee data including course
+$query = "SELECT s.enrollment_no, u.full_name, sb.course, sf.total_fee, sf.paid_fee, sf.pending_fee, sf.payment_mode 
+          FROM student_fees sf 
+          JOIN students_basic sb ON sf.student_id = sb.student_id
+          JOIN students s ON sb.student_id = s.enrollment_no
+          JOIN users u ON s.user_id = u.id
+          ORDER BY s.enrollment_no ASC";
+
+$fees = $pdo->query($query)->fetchAll(PDO::FETCH_ASSOC);
+
+// Set headers for Excel (.xls) download
+header("Content-Type: application/vnd.ms-excel; charset=utf-8");
+header("Content-Disposition: attachment; filename=Fees_Report_" . date('Y-m-d') . ".xls");
+header("Pragma: no-cache");
+header("Expires: 0");
+
+// Output the data as an HTML table which Excel recognizes as a native spreadsheet format
 ?>
-<!DOCTYPE html>
-<html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
 <head>
-    <title>Fees Report</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <!--[if gte mso 9]>
+    <xml>
+        <x:ExcelWorkbook>
+            <x:ExcelWorksheets>
+                <x:ExcelWorksheet>
+                    <x:Name>Fees Report</x:Name>
+                    <x:WorksheetOptions>
+                        <x:DisplayGridlines/>
+                    </x:WorksheetOptions>
+                </x:ExcelWorksheet>
+            </x:ExcelWorksheets>
+        </x:ExcelWorkbook>
+    </xml>
+    <![endif]-->
     <style>
-        @media print { .no-print { display: none; } }
-        body { font-family: 'Inter', sans-serif; }
+        .text { mso-number-format:"\@"; }
+        .num { mso-number-format:"0\.00"; }
+        th { background-color: #f1f5f9; font-weight: bold; border: 1px solid #000; }
+        td { border: 1px solid #ccc; }
     </style>
 </head>
-<body class="p-5">
-    <div class="text-center mb-5">
-        <img src="../assets/img/logo.png" height="60" class="mb-3">
-        <h2 class="fw-bold">TechnoHacks IT Solutions</h2>
-        <p class="text-muted">Fees Collection Report - <?php echo date('M d, Y'); ?></p>
-    </div>
-    
-    <table class="table table-bordered">
-        <thead class="table-light">
+<body>
+    <table>
+        <thead>
             <tr>
-                <th>Student ID</th>
-                <th>Name</th>
-                <th>Total Fee</th>
-                <th>Paid</th>
-                <th>Pending</th>
-                <th>Mode</th>
+                <th style="background-color: #6366f1; color: #ffffff;">Student ID</th>
+                <th style="background-color: #6366f1; color: #ffffff;">Student Name</th>
+                <th style="background-color: #6366f1; color: #ffffff;">Enrolled Course</th>
+                <th style="background-color: #6366f1; color: #ffffff;">Total Fee (INR)</th>
+                <th style="background-color: #6366f1; color: #ffffff;">Paid Amount (INR)</th>
+                <th style="background-color: #6366f1; color: #ffffff;">Pending Amount (INR)</th>
+                <th style="background-color: #6366f1; color: #ffffff;">Payment Mode</th>
             </tr>
         </thead>
         <tbody>
             <?php foreach($fees as $f): ?>
             <tr>
-                <td><?php echo $f['enrollment_no']; ?></td>
-                <td><?php echo $f['full_name']; ?></td>
-                <td>₹<?php echo number_format($f['total_fee'], 2); ?></td>
-                <td>₹<?php echo number_format($f['paid_fee'], 2); ?></td>
-                <td>₹<?php echo number_format($f['pending_fee'], 2); ?></td>
-                <td><?php echo $f['payment_mode']; ?></td>
+                <td class="text"><?php echo $f['enrollment_no']; ?></td>
+                <td><?php echo htmlspecialchars($f['full_name']); ?></td>
+                <td><?php echo htmlspecialchars($f['course']); ?></td>
+                <td class="num"><?php echo $f['total_fee']; ?></td>
+                <td class="num"><?php echo $f['paid_fee']; ?></td>
+                <td class="num"><?php echo $f['pending_fee']; ?></td>
+                <td><?php echo htmlspecialchars($f['payment_mode']); ?></td>
             </tr>
             <?php endforeach; ?>
         </tbody>
     </table>
-    
-    <div class="mt-5 text-end no-print">
-        <button onclick="window.print()" class="btn btn-primary">Print Report / Save PDF</button>
-        <button onclick="window.close()" class="btn btn-light border">Close</button>
-    </div>
-    
-    <script>window.onload = function() { // window.print(); }</script>
 </body>
 </html>

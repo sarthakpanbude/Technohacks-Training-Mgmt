@@ -51,21 +51,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['confirm_admission'])) 
     try {
         $pdo->beginTransaction();
 
-        // Check for Duplicate Student (Email or Mobile)
+        // Check for Existing User (to sync account if needed)
         $email = $_POST['email'];
         $mobile = $_POST['mobile'];
-        
-        $check_duplicate = $pdo->prepare("SELECT id FROM users WHERE email = ?");
-        $check_duplicate->execute([$email]);
-        if ($check_duplicate->fetch()) {
-            throw new Exception("A student with this email address is already admitted.");
-        }
 
-        $check_mobile = $pdo->prepare("SELECT id FROM students WHERE phone = ?");
-        $check_mobile->execute([$mobile]);
-        if ($check_mobile->fetch()) {
-            throw new Exception("A student with this mobile number is already admitted.");
-        }
+
         
         // Generate Student ID (Short Format: T + 5 random digits)
         do {
@@ -113,10 +103,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['confirm_admission'])) 
 
         // 4. Fees
         $total = $_POST['total_fee'];
+        $std_fee = $_POST['standard_fee'] ?: $total;
+        $other_disc = $_POST['other_discount'] ?: 0;
         $paid = $_POST['paid_fee'] ?: 0;
         $pending = $total - $paid;
-        $stmt = $pdo->prepare("INSERT INTO student_fees (student_id, total_fee, paid_fee, pending_fee, installments, payment_mode) VALUES (?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$student_id, $total, $paid, $pending, $_POST['installments'], $_POST['payment_mode']]);
+        $stmt = $pdo->prepare("INSERT INTO student_fees (student_id, total_fee, standard_fee, other_discount, paid_fee, pending_fee, installments, payment_mode) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$student_id, $total, $std_fee, $other_disc, $paid, $pending, $_POST['installments'], $_POST['payment_mode']]);
 
         // 5. Account & Students Sync
         $password = password_hash($_POST['mobile'], PASSWORD_DEFAULT);
@@ -408,16 +400,18 @@ include '../includes/sidebar.php';
                                 </div>
                                 <div class="mt-4 pt-4 border-top">
                                     <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <span class="text-muted small">Discount Applied:</span>
+                                        <span class="text-muted small">Special Discount:</span>
                                         <span class="fw-bold text-danger" id="discountDisplay">-₹0.00</span>
                                     </div>
-                                    <div class="d-flex justify-content-between align-items-center mb-2" id="referralDiscountRow" style="display: none !important;">
+                                    <div class="d-flex justify-content-between align-items-center mb-2" id="referralDiscountRow">
                                         <span class="text-muted small">Referral Discount (5%):</span>
                                         <span class="fw-bold text-success" id="referralDiscountDisplay">-₹0.00</span>
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center">
                                         <span class="fw-bold h5 mb-0">Total Payable Fee:</span>
                                         <input type="hidden" name="total_fee" id="finalTotalFee">
+                                        <input type="hidden" name="standard_fee" id="hiddenStdFee">
+                                        <input type="hidden" name="other_discount" id="hiddenOtherDiscount">
                                         <span class="fw-bold h4 mb-0 text-primary" id="finalFeeDisplay">₹0.00</span>
                                     </div>
                                 </div>
@@ -630,18 +624,16 @@ function calculateFinalFee() {
     if (referralDiscountApplied) {
         const refDisc = final * 0.05;
         final -= refDisc;
-        
-        document.getElementById('referralDiscountRow').style.display = 'flex';
-        document.getElementById('referralDiscountRow').style.setProperty('display', 'flex', 'important');
         document.getElementById('referralDiscountDisplay').textContent = '-₹' + refDisc.toLocaleString('en-IN', {minimumFractionDigits: 2});
     } else {
-        document.getElementById('referralDiscountRow').style.display = 'none';
-        document.getElementById('referralDiscountRow').style.setProperty('display', 'none', 'important');
+        document.getElementById('referralDiscountDisplay').textContent = '-₹0.00';
     }
 
     document.getElementById('discountDisplay').textContent = '-₹' + discount.toLocaleString('en-IN', {minimumFractionDigits: 2});
     document.getElementById('finalFeeDisplay').textContent = '₹' + final.toLocaleString('en-IN', {minimumFractionDigits: 2});
     document.getElementById('finalTotalFee').value = final;
+    document.getElementById('hiddenStdFee').value = std;
+    document.getElementById('hiddenOtherDiscount').value = discount;
     calculateInstallments();
 }
 
