@@ -10,8 +10,9 @@ require_once '../config/db.php';
 $id = $_GET['id'] ?? 0;
 
 // Fetch payment details with student, user, and course info
-$stmt = $pdo->prepare("SELECT p.*, u.full_name, u.email, s.phone, s.enrollment_no, s.id as student_id,
+$stmt = $pdo->prepare("SELECT p.*, u.full_name, u.email, s.phone, s.enrollment_no, s.id as student_id, s.created_at as admission_date,
                               c.name as course_name, c.fees as course_total_fees,
+                              sf.total_fee as student_total_fee, sf.standard_fee, sf.other_discount,
                               (SELECT SUM(amount) FROM payments WHERE student_id = s.id AND id <= p.id) as total_received
                        FROM payments p 
                        JOIN students s ON p.student_id = s.id 
@@ -19,6 +20,7 @@ $stmt = $pdo->prepare("SELECT p.*, u.full_name, u.email, s.phone, s.enrollment_n
                        LEFT JOIN enrollments e ON s.id = e.student_id
                        LEFT JOIN batches b ON e.batch_id = b.id
                        LEFT JOIN courses c ON b.course_id = c.id
+                       LEFT JOIN student_fees sf ON s.enrollment_no = sf.student_id
                        WHERE p.id = ?");
 $stmt->execute([$id]);
 $payment = $stmt->fetch();
@@ -26,6 +28,11 @@ $payment = $stmt->fetch();
 if (!$payment) {
     die("Invoice not found.");
 }
+
+// Fetch Referral Discount info
+$stmt = $pdo->prepare("SELECT * FROM referral_bonuses WHERE referred_id = ?");
+$stmt->execute([$payment['enrollment_no']]);
+$discount_info = $stmt->fetch();
 
 // Fetch pending installments for this student
 $stmt_inst = $pdo->prepare("SELECT * FROM installments WHERE student_id = ? AND status = 'Pending' ORDER BY due_date ASC");
@@ -272,27 +279,28 @@ $due_date = date('d/m/Y', strtotime($payment['payment_date'] . ' + 30 days'));
             align-items: flex-end;
         }
 
-        .total-row {
-            display: flex;
-            justify-content: flex-end;
-            width: 100%;
-            max-width: 300px;
-            margin-bottom: 5px;
-            font-size: 14px;
-        }
-
-        .total-label {
-            width: 180px;
-            text-align: right;
-            padding-right: 20px;
-            font-weight: 600;
-            color: #555;
-        }
-
         .total-value {
             width: 120px;
             text-align: right;
             font-weight: 600;
+        }
+
+        .total-label {
+            flex: 1;
+            text-align: right;
+            padding-right: 20px;
+            font-weight: 600;
+            color: #555;
+            white-space: nowrap;
+        }
+
+        .total-row {
+            display: flex;
+            justify-content: flex-end;
+            width: 100%;
+            max-width: 400px;
+            margin-bottom: 5px;
+            font-size: 14px;
         }
 
         .grand-total {
@@ -414,19 +422,21 @@ $due_date = date('d/m/Y', strtotime($payment['payment_date'] . ' + 30 days'));
             <div class="customer-phone">Mobile: <?php echo $payment['phone'] ?? 'N/A'; ?></div>
         </div>
 
+        <?php 
+        $student_total_fee = $payment['student_total_fee'] ?? $payment['course_total_fees'];
+        $calc_std_fee = ($payment['standard_fee'] > 0) ? $payment['standard_fee'] : ($student_total_fee + ($payment['other_discount'] ?? 0) + ($discount_info['discount_amount'] ?? 0));
+        ?>
         <table class="table services-table">
             <thead>
                 <tr>
                     <th>SERVICES</th>
-                    <th class="text-end">DISC.</th>
                     <th class="text-end">AMOUNT</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
                     <td><?php echo strtoupper($course_name); ?> ( OFFLINE )</td>
-                    <td class="text-end">0.00</td>
-                    <td class="text-end"><?php echo number_format($payment['amount'], 2); ?></td>
+                    <td class="text-end"><?php echo number_format($calc_std_fee, 2); ?></td>
                 </tr>
             </tbody>
         </table>
@@ -434,19 +444,26 @@ $due_date = date('d/m/Y', strtotime($payment['payment_date'] . ' + 30 days'));
         <div class="subtotal-bar">
             <span>SUBTOTAL</span>
             <div class="d-flex gap-5">
-                <span>₹ 0.00</span>
-                <span>₹ <?php echo number_format($payment['amount'], 2); ?></span>
+                <span>₹ <?php echo number_format($calc_std_fee, 2); ?></span>
             </div>
         </div>
 
         <div class="totals-section">
             <div class="total-row">
-                <div class="total-label">TAXABLE AMOUNT</div>
-                <div class="total-value">₹ <?php echo number_format($payment['amount'], 2); ?></div>
+                <div class="total-label">STANDARD COURSE FEE</div>
+                <div class="total-value">₹ <?php echo number_format($calc_std_fee, 2); ?></div>
+            </div>
+            <div class="total-row text-primary">
+                <div class="total-label">SPECIAL DISCOUNT</div>
+                <div class="total-value">- ₹ <?php echo number_format($payment['other_discount'] ?? 0, 2); ?></div>
+            </div>
+            <div class="total-row text-success">
+                <div class="total-label">REFERRAL DISCOUNT</div>
+                <div class="total-value">- ₹ <?php echo number_format($discount_info['discount_amount'] ?? 0, 2); ?></div>
             </div>
             <div class="total-row grand-total">
-                <div class="total-label">TOTAL AMOUNT</div>
-                <div class="total-value">₹ <?php echo number_format($payment['amount'], 2); ?></div>
+                <div class="total-label">TOTAL PAYABLE FEE</div>
+                <div class="total-value">₹ <?php echo number_format($student_total_fee, 2); ?></div>
             </div>
             <div class="total-row">
                 <div class="total-label">Received Amount</div>
@@ -482,10 +499,15 @@ $due_date = date('d/m/Y', strtotime($payment['payment_date'] . ' + 30 days'));
             </div>
         <?php endif; ?>
 
+        <?php 
+        $refund_date = ($discount_info && $discount_info['refund_expiry_date']) 
+            ? $discount_info['refund_expiry_date'] 
+            : date('Y-m-d', strtotime($payment['admission_date'] . ' + 7 days'));
+        ?>
         <div class="terms-conditions-box" style="font-size: 10px; color: #555; margin: 20px 40px; padding: 15px; background: #f8f9fa; border: 1px solid #eee; border-radius: 4px;">
             <h6 style="font-size: 12px; font-weight: 700; color: #800080; margin-bottom: 8px; text-transform: uppercase;">Terms & Conditions</h6>
             <ol style="padding-left: 15px; margin-bottom: 0; line-height: 1.5;">
-                <li><strong>Refund Policy:</strong> 100% refund if cancelled within 7 days (short courses) or 14 days (full/advanced) from course start. After this period, no refund will be provided.</li>
+                <li><strong>Refund Policy:</strong> A 100% refund is available if cancelled within the active refund period ending on <strong><?php echo date('d M Y', strtotime($refund_date)); ?></strong>, after which no refund will be provided.</li>
                 <li>100% refund will be given if the syllabus is not completed due to the institute’s fault.</li>
                 <li><strong>Lifetime access:</strong> Students can join any existing batch again after course completion, free of cost (same course only).</li>
                 <li>Fees must be paid as per plan. Delay may suspend access.</li>
@@ -494,7 +516,6 @@ $due_date = date('d/m/Y', strtotime($payment['payment_date'] . ' + 30 days'));
                 <li>Batch timings, trainer, or schedule may change if required.</li>
                 <li>The institute is not responsible for any medical issues, injury, or health-related loss during the course.</li>
                 <li>Misconduct or rule violation may lead to termination without refund.</li>
-                <li>Study material is for personal use only; sharing is prohibited.</li>
             </ol>
         </div>
 

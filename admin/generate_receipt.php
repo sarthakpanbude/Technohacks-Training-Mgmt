@@ -7,7 +7,12 @@ $student_id = $_GET['id'] ?? null;
 $inst_id = $_GET['inst_id'] ?? null;
 
 // Use the students_basic and student_fees tables as per the existing logic in this file
-$stmt = $pdo->prepare("SELECT sb.full_name, sb.course, sf.* FROM students_basic sb JOIN student_fees sf ON sb.student_id = sf.student_id WHERE sb.student_id = ?");
+$stmt = $pdo->prepare("SELECT sb.full_name, sb.course, sf.*, s.created_at as admission_date, s.phone, u.email 
+                      FROM students_basic sb 
+                      JOIN student_fees sf ON sb.student_id = sf.student_id 
+                      JOIN students s ON sb.student_id = s.enrollment_no 
+                      LEFT JOIN users u ON s.user_id = u.id
+                      WHERE sb.student_id = ?");
 $stmt->execute([$student_id]);
 $s = $stmt->fetch();
 
@@ -132,10 +137,10 @@ if ($installment_data) {
         }
 
         .bill-header {
-            padding: 20px 40px;
+            padding: 10px 40px;
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
+            align-items: center;
         }
 
         .bill-of-supply {
@@ -164,10 +169,10 @@ if ($installment_data) {
         }
 
         .company-section {
-            padding: 0 40px 20px;
+            padding: 0 40px 10px;
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 15px;
         }
 
         .company-logo img {
@@ -177,8 +182,8 @@ if ($installment_data) {
         .company-details h1 {
             color: #800080;
             font-weight: 700;
-            font-size: 28px;
-            margin-bottom: 2px;
+            font-size: 24px;
+            margin-bottom: 0;
         }
 
         .company-info p {
@@ -189,11 +194,13 @@ if ($installment_data) {
         }
 
         .invoice-details-bar {
-            background: #e9ecef;
-            padding: 12px 40px;
+            background: #f8f9fa;
+            border-top: 1px solid #eee;
+            border-bottom: 1px solid #eee;
+            padding: 8px 40px;
             display: flex;
             justify-content: space-between;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
 
         .detail-item {
@@ -206,24 +213,24 @@ if ($installment_data) {
 
         .bill-to-section {
             padding: 0 40px;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
 
         .bill-to-section h6 {
             font-weight: 700;
-            font-size: 14px;
-            margin-bottom: 8px;
+            font-size: 13px;
+            margin-bottom: 4px;
         }
 
         .customer-name {
             font-weight: 700;
-            font-size: 16px;
-            margin-bottom: 2px;
+            font-size: 15px;
+            margin-bottom: 0;
         }
 
         .customer-phone {
-            font-size: 13px;
-            color: #555;
+            font-size: 12px;
+            color: #666;
         }
 
         .services-table {
@@ -233,16 +240,16 @@ if ($installment_data) {
 
         .services-table th {
             border-top: 2px solid #800080;
-            border-bottom: 2px solid #800080;
-            padding: 12px 40px;
-            font-size: 13px;
+            border-bottom: 1px solid #eee;
+            padding: 8px 40px;
+            font-size: 12px;
             font-weight: 700;
             text-transform: uppercase;
         }
 
         .services-table td {
-            padding: 15px 40px;
-            font-size: 14px;
+            padding: 10px 40px;
+            font-size: 13px;
             vertical-align: middle;
         }
 
@@ -257,7 +264,7 @@ if ($installment_data) {
         }
 
         .totals-section {
-            padding: 20px 40px;
+            padding: 10px 40px;
             display: flex;
             flex-direction: column;
             align-items: flex-end;
@@ -267,17 +274,18 @@ if ($installment_data) {
             display: flex;
             justify-content: flex-end;
             width: 100%;
-            max-width: 300px;
-            margin-bottom: 5px;
-            font-size: 14px;
+            max-width: 400px;
+            margin-bottom: 2px;
+            font-size: 13px;
         }
 
         .total-label {
-            width: 180px;
+            flex: 1;
             text-align: right;
             padding-right: 20px;
             font-weight: 600;
             color: #555;
+            white-space: nowrap;
         }
 
         .total-value {
@@ -295,8 +303,8 @@ if ($installment_data) {
 
         .amount-in-words {
             text-align: right;
-            font-size: 12px;
-            margin-top: 15px;
+            font-size: 11px;
+            margin-top: 5px;
         }
 
         .amount-in-words p {
@@ -308,15 +316,15 @@ if ($installment_data) {
         }
 
         .signature-section {
-            padding: 40px 40px 60px;
+            padding: 10px 40px 30px;
             display: flex;
             flex-direction: column;
             align-items: flex-end;
         }
 
         .signature-img {
-            height: 60px;
-            margin-bottom: 10px;
+            height: 40px;
+            margin-bottom: 5px;
         }
 
         .signature-label {
@@ -348,7 +356,10 @@ if ($installment_data) {
 <body>
     <div class="container py-4 no-print text-center">
         <button onclick="window.print()" class="btn btn-primary px-4 shadow-sm">
-            <i class="fas fa-print me-2"></i>Print Both Copies
+            <i class="fas fa-print me-2"></i>Print Receipt
+        </button>
+        <button onclick="downloadPDF()" class="btn btn-success px-4 shadow-sm ms-2">
+            <i class="fas fa-file-pdf me-2"></i>Download PDF
         </button>
         <button onclick="window.close()" class="btn btn-outline-secondary px-4 shadow-sm ms-2">
             <i class="fas fa-times me-2"></i>Close
@@ -357,16 +368,14 @@ if ($installment_data) {
 
     <?php 
     $copies = [
-        "ORIGINAL FOR STUDENT",
-        "INSTITUTE COPY"
+        "OFFICIAL RECEIPT"
     ];
     foreach ($copies as $index => $copy_type): 
     ?>
-    <div class="bill-container">
+    <div class="bill-container" id="printable-area">
         <div class="bill-header">
             <div class="bill-of-supply">
                 <span><?php echo $installment_data ? 'INSTALLMENT RECEIPT' : 'BILL OF SUPPLY'; ?></span>
-                <div class="original-tag"><?php echo $copy_type; ?></div>
             </div>
             <div class="slogan">Let's Grow Together...!!</div>
         </div>
@@ -398,6 +407,7 @@ if ($installment_data) {
                 <div>
                     <h6>BILL TO</h6>
                     <div class="customer-name"><?php echo htmlspecialchars($s['full_name']); ?></div>
+                    <div class="customer-phone" style="font-weight: 500;"><?php echo htmlspecialchars($s['phone']); ?> | <?php echo htmlspecialchars($s['email']); ?></div>
                     <div class="customer-phone">Student ID: <?php echo $s['student_id']; ?></div>
                 </div>
                 <?php if ($installment_data && $installment_data['transaction_id']): ?>
@@ -410,19 +420,20 @@ if ($installment_data) {
             </div>
         </div>
 
+        <?php 
+        $calc_std_fee = ($s['standard_fee'] > 0) ? $s['standard_fee'] : ($total_fees + ($s['other_discount'] ?? 0) + ($discount_info['discount_amount'] ?? 0));
+        ?>
         <table class="table services-table">
             <thead>
                 <tr>
                     <th>SERVICES</th>
-                    <th class="text-end">DISC.</th>
                     <th class="text-end">AMOUNT</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
                     <td><?php echo strtoupper($course_name); ?> ( OFFLINE )</td>
-                    <td class="text-end">0.00</td>
-                    <td class="text-end"><?php echo number_format($total_fees, 2); ?></td>
+                    <td class="text-end"><?php echo number_format($calc_std_fee, 2); ?></td>
                 </tr>
             </tbody>
         </table>
@@ -430,28 +441,23 @@ if ($installment_data) {
         <div class="subtotal-bar">
             <span>SUBTOTAL</span>
             <div class="d-flex gap-5">
-                <span>₹ 0.00</span>
-                <span>₹ <?php echo number_format($total_fees, 2); ?></span>
+                <span>₹ <?php echo number_format($calc_std_fee, 2); ?></span>
             </div>
         </div>
 
         <div class="totals-section">
             <div class="total-row">
                 <div class="total-label">STANDARD COURSE FEE</div>
-                <div class="total-value">₹ <?php echo number_format($s['standard_fee'] > 0 ? $s['standard_fee'] : $total_fees, 2); ?></div>
+                <div class="total-value">₹ <?php echo number_format($calc_std_fee, 2); ?></div>
             </div>
-            <?php if ($s['other_discount'] > 0): ?>
             <div class="total-row text-primary">
                 <div class="total-label">SPECIAL DISCOUNT</div>
-                <div class="total-value">- ₹ <?php echo number_format($s['other_discount'], 2); ?></div>
+                <div class="total-value">- ₹ <?php echo number_format($s['other_discount'] ?? 0, 2); ?></div>
             </div>
-            <?php endif; ?>
-            <?php if ($discount_info && $discount_info['discount_amount'] > 0): ?>
             <div class="total-row text-success">
                 <div class="total-label">REFERRAL DISCOUNT</div>
-                <div class="total-value">- ₹ <?php echo number_format($discount_info['discount_amount'], 2); ?></div>
+                <div class="total-value">- ₹ <?php echo number_format($discount_info['discount_amount'] ?? 0, 2); ?></div>
             </div>
-            <?php endif; ?>
             <div class="total-row grand-total">
                 <div class="total-label">TOTAL PAYABLE FEE</div>
                 <div class="total-value">₹ <?php echo number_format($total_fees, 2); ?></div>
@@ -483,24 +489,24 @@ if ($installment_data) {
         </div>
 
         <?php if ($s['next_installment_amount'] > 0 || $s['third_installment_amount'] > 0): ?>
-        <div class="installments-section px-5 mb-4">
-            <h6 class="fw-bold text-uppercase border-bottom pb-2 mb-3" style="font-size: 13px; color: #800080;">Upcoming Installment Schedule</h6>
-            <div class="row g-3">
+        <div class="installments-section px-5 mb-3">
+            <h6 class="fw-bold text-uppercase border-bottom pb-1 mb-2" style="font-size: 11px; color: #800080;">Upcoming Installment Schedule</h6>
+            <div class="row g-2">
                 <?php if ($s['next_installment_amount'] > 0): ?>
                 <div class="col-6">
-                    <div class="p-3 border rounded bg-light">
-                        <div class="small text-muted mb-1">2nd Installment</div>
-                        <div class="fw-bold fs-5">₹ <?php echo number_format($s['next_installment_amount'], 2); ?></div>
-                        <div class="small text-primary">Due: <?php echo date('d M Y', strtotime($s['next_installment_date'])); ?></div>
+                    <div class="p-2 border rounded bg-light" style="font-size: 11px;">
+                        <div class="small text-muted">2nd Installment</div>
+                        <div class="fw-bold">₹ <?php echo number_format($s['next_installment_amount'], 2); ?></div>
+                        <div class="text-primary">Due: <?php echo date('d M Y', strtotime($s['next_installment_date'])); ?></div>
                     </div>
                 </div>
                 <?php endif; ?>
                 <?php if ($s['third_installment_amount'] > 0): ?>
                 <div class="col-6">
-                    <div class="p-3 border rounded bg-light">
-                        <div class="small text-muted mb-1">3rd Installment</div>
-                        <div class="fw-bold fs-5">₹ <?php echo number_format($s['third_installment_amount'], 2); ?></div>
-                        <div class="small text-primary">Due: <?php echo date('d M Y', strtotime($s['third_installment_date'])); ?></div>
+                    <div class="p-2 border rounded bg-light" style="font-size: 11px;">
+                        <div class="small text-muted">3rd Installment</div>
+                        <div class="fw-bold">₹ <?php echo number_format($s['third_installment_amount'], 2); ?></div>
+                        <div class="text-primary">Due: <?php echo date('d M Y', strtotime($s['third_installment_date'])); ?></div>
                     </div>
                 </div>
                 <?php endif; ?>
@@ -518,21 +524,29 @@ if ($installment_data) {
             <div class="signature-company">TechnoHacks Solutions</div>
         </div>
         
-        <?php if ($discount_info && $discount_info['refund_expiry_date']): ?>
-        <div class="refund-note px-5 pb-4">
-            <div class="p-2 border rounded bg-light small" style="border-left: 4px solid #ef4444 !important;">
-                <i class="fas fa-info-circle text-danger me-2"></i>
-                <strong>Refund Policy Note:</strong> 
-                Refund period will be active till <strong><?php echo date('d M Y', strtotime($discount_info['refund_expiry_date'])); ?></strong>. 
-                After that, refund will not be given.
-            </div>
-        </div>
-        <?php endif; ?>
     </div>
     <?php if ($index == 0): ?>
         <div class="page-break no-print"></div>
     <?php endif; ?>
     <?php endforeach; ?>
+
+    <!-- PDF Generation Script -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script>
+        function downloadPDF() {
+            const element = document.getElementById('printable-area');
+            const receiptNo = '<?php echo htmlspecialchars($invoice_no); ?>'.replace(/[^a-z0-9]/gi, '_');
+            const opt = {
+                margin:       [10, 10, 10, 10],
+                filename:     `Fee_Receipt_${receiptNo}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(element).save();
+        }
+    </script>
 </body>
 </html>
 

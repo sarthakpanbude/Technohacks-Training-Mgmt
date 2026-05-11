@@ -33,6 +33,11 @@ if (!$photo && isset($s['email'])) {
 $inst_stmt = $pdo->prepare("SELECT * FROM installments WHERE student_id = ? ORDER BY installment_no ASC");
 $inst_stmt->execute([$s['real_id']]);
 $installments_list = $inst_stmt->fetchAll();
+
+// Fetch Referral Discount
+$stmt = $pdo->prepare("SELECT discount_amount FROM referral_bonuses WHERE referred_id = ?");
+$stmt->execute([$student_id]);
+$referral_discount = $stmt->fetchColumn() ?: 0;
 ?>
 <!DOCTYPE html>
 <html>
@@ -55,9 +60,9 @@ $installments_list = $inst_stmt->fetchAll();
 
         .bill-container {
             max-width: 850px;
-            margin: 10px auto;
+            margin: 0 auto;
             background: #fff;
-            padding: 15px 40px;
+            padding: 5px 40px;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
             position: relative;
         }
@@ -86,8 +91,8 @@ $installments_list = $inst_stmt->fetchAll();
         }
 
         .logo-box {
-            width: 80px;
-            height: 80px;
+            width: 60px;
+            height: 60px;
             border: 1px solid #e0e0e0;
             border-radius: 8px;
             display: flex;
@@ -122,7 +127,7 @@ $installments_list = $inst_stmt->fetchAll();
         .form-title {
             font-family: 'Montserrat', sans-serif;
             font-weight: 700;
-            font-size: 38px;
+            font-size: 28px;
             color: #800080;
             margin: 0;
             letter-spacing: 0.5px;
@@ -135,8 +140,8 @@ $installments_list = $inst_stmt->fetchAll();
         }
 
         .photo-frame {
-            width: 100px;
-            height: 120px;
+            width: 90px;
+            height: 100px;
             border: 1.5px solid #333;
             background: #fdfdfd;
             display: flex;
@@ -164,32 +169,32 @@ $installments_list = $inst_stmt->fetchAll();
             width: 100%;
             height: 1.5px;
             background: #1a1a1a;
-            margin: 8px 0;
+            margin: 4px 0;
         }
 
         .info-row {
             display: flex;
             justify-content: space-between;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 400;
             color: #333;
-            margin-bottom: 15px;
+            margin-bottom: 5px;
             padding: 0 5px;
         }
 
         /* Section Styles */
         .section-header {
-            margin-top: 15px;
-            margin-bottom: 8px;
+            margin-top: 8px;
+            margin-bottom: 5px;
         }
 
         .section-header h6 {
             font-family: 'Montserrat', sans-serif;
             font-weight: 800;
-            font-size: 13px;
+            font-size: 12px;
             color: #ffffff;
             background: #1a1a1a;
-            padding: 10px 15px;
+            padding: 6px 12px;
             border-left: 6px solid #800080;
             letter-spacing: 1px;
             margin: 0;
@@ -201,9 +206,9 @@ $installments_list = $inst_stmt->fetchAll();
         .sub-header {
             font-family: 'Montserrat', sans-serif;
             font-weight: 700;
-            font-size: 11px;
+            font-size: 10px;
             color: #800080;
-            margin: 15px 0 8px 5px;
+            margin: 8px 0 5px 5px;
             text-transform: uppercase;
             letter-spacing: 0.8px;
             display: flex;
@@ -220,7 +225,7 @@ $installments_list = $inst_stmt->fetchAll();
 
         .table-details {
             width: 100%;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
             border-collapse: collapse;
             background: #fff;
         }
@@ -230,9 +235,9 @@ $installments_list = $inst_stmt->fetchAll();
             background-color: #fcfcfc;
             font-family: 'Montserrat', sans-serif;
             font-weight: 700;
-            font-size: 11px;
+            font-size: 10px;
             color: #666;
-            padding: 12px 15px;
+            padding: 8px 12px;
             border: 1px solid #eeeeee;
             text-align: left;
             text-transform: uppercase;
@@ -240,9 +245,9 @@ $installments_list = $inst_stmt->fetchAll();
         }
 
         .table-details td {
-            padding: 12px 15px;
+            padding: 8px 12px;
             border: 1px solid #eeeeee;
-            font-size: 13px;
+            font-size: 12px;
             color: #111111;
             font-weight: 500;
         }
@@ -265,24 +270,25 @@ $installments_list = $inst_stmt->fetchAll();
         }
 
         .terms-conditions-box {
-            font-size: 11.5px;
+            font-size: 9.5px;
             color: #444;
-            margin-top: 10px;
-            padding: 12px;
+            margin-top: 5px;
+            padding: 8px;
             background: #fff;
             border: 1px solid #e0e0e0;
+            line-height: 1.3;
         }
 
         .terms-conditions-box h6 {
             font-weight: 700;
             color: #1a1a1a;
-            margin-bottom: 8px;
+            margin-bottom: 5px;
             text-transform: uppercase;
-            font-size: 11px;
+            font-size: 10px;
         }
 
         .signature-section {
-            margin-top: 20px;
+            margin-top: 10px;
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
@@ -346,21 +352,12 @@ $installments_list = $inst_stmt->fetchAll();
                 margin: 0;
                 width: 100%;
                 max-width: 100%;
-                padding: 20px;
+                padding: 10px;
                 border: none;
             }
 
             .no-print {
                 display: none !important;
-            }
-
-            .page-break {
-                border-bottom: none;
-            }
-
-            .copy-tag-badge {
-                top: 10px;
-                left: 20px;
             }
         }
     </style>
@@ -370,7 +367,10 @@ $installments_list = $inst_stmt->fetchAll();
     <div class="container py-4 no-print text-center">
         <div class="d-flex justify-content-center gap-2">
             <button onclick="window.print()" class="btn btn-primary px-4 shadow-sm">
-                <i class="fas fa-print me-2"></i>Print Both Copies
+                <i class="fas fa-print me-2"></i>Print Form
+            </button>
+            <button onclick="downloadPDF()" class="btn btn-success px-4 shadow-sm">
+                <i class="fas fa-file-pdf me-2"></i>Download PDF
             </button>
             <a href="students.php" class="btn btn-outline-secondary px-4 shadow-sm">
                 <i class="fas fa-arrow-left me-2"></i>Back to Students
@@ -379,11 +379,11 @@ $installments_list = $inst_stmt->fetchAll();
     </div>
 
     <?php
-    $copies = ["STUDENT COPY", "INSTITUTE COPY"];
+    $copies = ["ADMISSION FORM"];
     foreach ($copies as $index => $copy_type):
         ?>
-        <div class="bill-container">
-            <div class="copy-tag-badge"><?php echo $copy_type; ?></div>
+        <div class="bill-container" id="printable-area">
+            
 
             <header class="form-header">
                 <div class="header-top-row">
@@ -420,7 +420,7 @@ $installments_list = $inst_stmt->fetchAll();
 
             <!-- Section 1 -->
         <div class="section-header">
-            <h6>SECTION 1: PERSONAL DETAILS</h6>
+            <h6>PERSONAL DETAILS</h6>
         </div>
         <div class="section-flex">
             <div class="details-table-wrapper">
@@ -461,7 +461,7 @@ $installments_list = $inst_stmt->fetchAll();
 
         <!-- Section 2 -->
         <div class="section-header">
-            <h6>SECTION 2: COURSE & FEE DETAILS</h6>
+            <h6>COURSE & FEE DETAILS</h6>
         </div>
         
         <div class="sub-header">COURSE INFORMATION</div>
@@ -482,22 +482,48 @@ $installments_list = $inst_stmt->fetchAll();
 
         <div class="sub-header">FEE INFORMATION</div>
         <table class="table-details">
+            <?php 
+            $calc_std_fee = ($s['standard_fee'] > 0) ? $s['standard_fee'] : (($s['total_fee'] ?? 0) + ($s['other_discount'] ?? 0) + $referral_discount);
+            ?>
             <tr>
-                <th>Total Course Fee</th>
-                <td><strong>₹<?php echo number_format($s['total_fee'] ?? 0, 2); ?></strong></td>
+                <th>Standard Fee</th>
+                <td>₹<?php echo number_format($calc_std_fee, 2); ?></td>
                 <th>Payment Mode</th>
                 <td><?php echo htmlspecialchars($s['payment_mode'] ?? 'N/A'); ?></td>
+            </tr>
+            <tr>
+                <th>Discounts Applied</th>
+                <td colspan="3">
+                    <div style="display: flex; gap: 15px; font-size: 11px;">
+                        <span>• Special Discount: <strong>-₹<?php echo number_format($s['other_discount'] ?? 0, 2); ?></strong></span>
+                        <span>• Referral Discount: <strong>-₹<?php echo number_format($referral_discount, 2); ?></strong></span>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <th>Final Payable Fee</th>
+                <td colspan="3"><strong style="font-size: 16px; color: #800080;">₹<?php echo number_format($s['total_fee'] ?? 0, 2); ?></strong></td>
             </tr>
         </table>
 
 
 
             <!-- Terms & Conditions -->
+            <?php 
+            $refund_date = ($referral_discount > 0) 
+                ? date('Y-m-d', strtotime(($s['created_at'] ?? 'now') . ' + 15 days')) 
+                : date('Y-m-d', strtotime(($s['created_at'] ?? 'now') . ' + 7 days'));
+            
+            // Re-fetch from DB if available to be exact
+            $stmt_ref = $pdo->prepare("SELECT refund_expiry_date FROM referral_bonuses WHERE referred_id = ?");
+            $stmt_ref->execute([$student_id]);
+            $db_refund_date = $stmt_ref->fetchColumn();
+            if ($db_refund_date) $refund_date = $db_refund_date;
+            ?>
             <div class="terms-conditions-box">
                 <h6>Terms & Conditions</h6>
                 <ol style="padding-left: 15px; margin-bottom: 0; line-height: 1.5;">
-                    <li><strong>Refund Policy:</strong> 100% refund if cancelled within 7 days (short courses) or 14 days
-                        (full/advanced) from course start. After this period, no refund will be provided.</li>
+                    <li><strong>Refund Policy:</strong> A 100% refund is available if cancelled within the active refund period ending on <strong><?php echo date('d M Y', strtotime($refund_date)); ?></strong>, after which no refund will be provided.</li>
                     <li>100% refund will be given if the syllabus is not completed due to the institute’s fault.</li>
                     <li><strong>Lifetime access:</strong> Students can join any existing batch again after course
                         completion, free of cost (same course only).</li>
@@ -508,7 +534,6 @@ $installments_list = $inst_stmt->fetchAll();
                     <li>The institute is not responsible for any medical issues, injury, or health-related loss during the
                         course.</li>
                     <li>Misconduct or rule violation may lead to termination without refund.</li>
-                    <li>Study material is for personal use only; sharing is prohibited.</li>
                 </ol>
             </div>
 
@@ -530,12 +555,25 @@ $installments_list = $inst_stmt->fetchAll();
                 </div>
             </div>
 
-            </div>
-        </div>
-        <?php if ($index == 0): ?>
-            <div class="page-break no-print"></div>
-        <?php endif; ?>
     <?php endforeach; ?>
+
+    <!-- PDF Generation Script -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script>
+        function downloadPDF() {
+            const element = document.getElementById('printable-area');
+            const studentId = '<?php echo htmlspecialchars($student_id); ?>'.replace(/[^a-z0-9]/gi, '_');
+            const opt = {
+                margin:       [5, 5, 5, 5],
+                filename:     `Admission_Form_${studentId}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(element).save();
+        }
+    </script>
 </body>
 
 </html>
