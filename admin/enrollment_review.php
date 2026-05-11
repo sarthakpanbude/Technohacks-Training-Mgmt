@@ -132,7 +132,6 @@ include '../includes/sidebar.php';
                         <th class="px-4 py-3 border-0 small fw-bold text-uppercase text-muted">Student Details</th>
                         <th class="py-3 border-0 small fw-bold text-uppercase text-muted">Receipt #</th>
                         <th class="py-3 border-0 small fw-bold text-uppercase text-muted">Fee Status</th>
-                        <th class="py-3 border-0 small fw-bold text-uppercase text-muted">Batch</th>
                         <th class="py-3 border-0 small fw-bold text-uppercase text-muted">Status</th>
                         <th class="py-3 border-0 small fw-bold text-uppercase text-muted text-center">Actions</th>
                     </tr>
@@ -170,11 +169,6 @@ include '../includes/sidebar.php';
                                 </div>
                             </td>
                             <td class="py-3">
-                                <span class="small fw-bold <?php echo $s['batch_name'] ? 'text-primary' : 'text-muted'; ?>">
-                                    <?php echo $s['batch_name'] ?: 'Not Assigned'; ?>
-                                </span>
-                            </td>
-                            <td class="py-3">
                                 <?php
                                 $badgeClass = 'bg-success';
                                 if ($s['admission_status'] == 'pending')
@@ -206,7 +200,7 @@ include '../includes/sidebar.php';
                                         </a>
                                     </div>
                                     <?php if ($s['admission_status'] != 'active'): ?>
-                                        <a href="assign_batch.php?student_id=<?php echo $s['main_student_id']; ?>"
+                                        <a href="activate_student.php?student_id=<?php echo $s['main_student_id']; ?>"
                                             class="btn btn-success btn-sm rounded-pill px-3 shadow-sm">
                                             <i class="fas fa-toggle-on me-1"></i> Active
                                         </a>

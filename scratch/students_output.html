@@ -1,0 +1,275 @@
+
+Notice: session_start(): Ignoring session_start() because a session is already active in C:\xampp\htdocs\backup project\backup project\includes\auth.php on line 2
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Active Students | TechnoHacks Solutions ERP</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+<body>
+    <div class="d-flex">
+<div class="sidebar">
+    <div class="auth-logo mb-4 text-center mt-2">
+        <img src="../assets/img/logo.png" alt="TechnoHacks Solutions" style="max-height: 80px; width: auto; max-width: 100%; object-fit: contain;">
+    </div>
+    
+    <div class="sidebar-menu">
+                    <a href="../admin/dashboard.php" class="sidebar-link ">
+                <i class="fas fa-th-large"></i> Dashboard
+            </a>
+            
+            <div class="sidebar-header">ADMISSION DETAILS</div>
+            <a href="../admin/admit.php?new=1" class="sidebar-link ">
+                <i class="fas fa-user-plus"></i> New Admission
+            </a>
+            <a href="../admin/students.php" class="sidebar-link active">
+                <i class="fas fa-user-graduate"></i> Student Profile
+            </a>
+
+            <div class="sidebar-header">ACADEMIC MANAGEMENT</div>
+            <a href="../admin/courses.php" class="sidebar-link ">
+                <i class="fas fa-book"></i> All Courses
+            </a>
+            <a href="../admin/batches.php" class="sidebar-link ">
+                <i class="fas fa-layer-group"></i> Active Batches
+            </a>
+
+            <div class="sidebar-header">FINANCE & ACCOUNT</div>
+            <a href="../fees/installments.php" class="sidebar-link ">
+                <i class="fas fa-file-invoice-dollar"></i> Fees Management
+            </a>
+            <a href="../admin/reports.php" class="sidebar-link ">
+                <i class="fas fa-chart-bar"></i> Reports and Analytics
+            </a>
+
+            <div class="sidebar-header">USER SETTINGS</div>
+            <a href="../admin/settings.php" class="sidebar-link ">
+                <i class="fas fa-cog"></i> Settings
+            </a>
+            <a href="../admin/profile.php" class="sidebar-link ">
+                <i class="fas fa-user-circle"></i> Account
+            </a>
+
+            </div>
+
+    <div class="sidebar-footer mt-auto pt-3">
+        <hr class="text-muted opacity-25">
+        <a href="../logout.php" class="sidebar-link text-danger fw-bold">
+            <i class="fas fa-sign-out-alt"></i> Logout
+        </a>
+    </div>
+</div>
+
+<style>
+.sidebar-header {
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    margin: 25px 0 10px 15px;
+}
+</style>
+
+<main class="main-content">
+    <header class="d-flex justify-content-between align-items-center mb-4 p-3 bg-white rounded-4 shadow-sm border animate-fade-in">
+    <div>
+        <h4 class="fw-bold mb-0">Active Students</h4>
+        <p class="text-muted small mb-0">TechnoHacks Training Management System</p>
+    </div>
+    <div class="d-flex align-items-center">
+        <!-- Notifications -->
+        <div class="dropdown me-3">
+            <button class="btn btn-white border rounded-circle p-2 position-relative" type="button" data-bs-toggle="dropdown">
+                <i class="fas fa-bell text-muted"></i>
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light" style="padding: 0.35em 0.5em;">3</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow border-0 p-2" style="width: 300px;">
+                <li><h6 class="dropdown-header">Notifications</h6></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item rounded mb-1" href="#"><i class="fas fa-user-plus me-2 text-primary"></i> New admission: Rahul Kumar</a></li>
+                <li><a class="dropdown-item rounded mb-1" href="#"><i class="fas fa-clock me-2 text-warning"></i> Fee due for Batch B102</a></li>
+            </ul>
+        </div>
+
+        <!-- Profile Dropdown -->
+        <div class="dropdown">
+            <button class="btn p-0 border-0 d-flex align-items-center" type="button" data-bs-toggle="dropdown">
+                <div class="profile-avatar-circle me-2">
+                    A                </div>
+                <div class="text-start d-none d-md-block">
+                    <div class="fw-bold small" style="line-height: 1;">Admin User</div>
+                    <div class="text-muted" style="font-size: 0.75rem;">Admin</div>
+                </div>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow border-0 p-2 mt-2">
+                <li><h6 class="dropdown-header">Account Settings</h6></li>
+                <li><a class="dropdown-item rounded mb-1" href="profile.php"><i class="fas fa-user-circle me-2"></i>My Profile</a></li>
+                <li><a class="dropdown-item rounded mb-1" href="settings.php"><i class="fas fa-cog me-2"></i>Settings</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item rounded mb-1 text-danger" href="../logout.php"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+            </ul>
+        </div>
+    </div>
+</header>
+
+    
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-3">
+        <div>
+            <h4 class="fw-bold mb-1" style="color:var(--text-main);">Active Students</h4>
+            <p class="mb-0" style="font-size:0.85rem; color:var(--text-muted);">
+                <span class="fw-semibold" style="color:var(--primary);">2</span> records found
+                            </p>
+        </div>
+        <div class="d-flex gap-2 align-items-center">
+            <a href="admit.php?new=1" class="btn btn-primary rounded-pill px-4" style="font-size:0.85rem;">
+                <i class="fas fa-plus me-2"></i>New Admission
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters Bar -->
+    <div class="stat-card mb-4" style="padding:1rem 1.25rem;">
+        <form action="" method="GET" class="row g-2 align-items-center">
+            <div class="col-md-5">
+                <div class="d-flex align-items-center gap-2 px-3 py-2 bg-white border rounded-pill" style="border-color:#e2e8f0!important;">
+                    <i class="fas fa-search" style="color:var(--text-muted);font-size:0.8rem;"></i>
+                    <input type="text" name="search" class="border-0 bg-transparent w-100" placeholder="Search by ID or name..."
+                           style="font-size:0.875rem;outline:none;"
+                           value="">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select name="course" class="form-select rounded-pill" style="font-size:0.875rem;" onchange="this.form.submit()">
+                    <option value="">All Courses</option>
+                                            <option value="C++ Programming" >
+                            C++ Programming                        </option>
+                                            <option value="Data Science with AI" >
+                            Data Science with AI                        </option>
+                                    </select>
+            </div>
+            <div class="col-md-2">
+                <select name="sort" class="form-select rounded-pill" style="font-size:0.875rem;" onchange="this.form.submit()">
+                    <option value="newest" selected>Newest First</option>
+                    <option value="oldest" >Oldest First</option>
+                    <option value="name_asc" >Name A–Z</option>
+                    <option value="name_desc" >Name Z–A</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-primary rounded-pill flex-grow-1" style="font-size:0.85rem;">
+                    <i class="fas fa-filter me-1"></i>Filter
+                </button>
+                            </div>
+        </form>
+    </div>
+
+    <!-- Students Table -->
+    <div class="custom-table-container table-responsive">
+        <table class="table mb-0 align-middle">
+            <thead>
+                <tr>
+                    <th style="padding:1rem 1.5rem;">#</th>
+                    <th style="padding:1rem 1.25rem;">Student</th>
+                    <th style="padding:1rem 1.25rem;">Enrollment ID</th>
+                    <th style="padding:1rem 1.25rem;">Course</th>
+                    <th style="padding:1rem 1.25rem;">Joined</th>
+                    <th style="padding:1rem 1.5rem; text-align:center;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                                                            <tr style="transition:background 0.15s;">
+                            <td style="padding:1rem 1.5rem; color:var(--text-muted); font-size:0.8rem; font-weight:600;">
+                                1                            </td>
+                            <td style="padding:1rem 1.25rem;">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,rgba(99,102,241,0.15),rgba(79,70,229,0.08));display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--primary);font-size:0.95rem;flex-shrink:0;">
+                                        S                                    </div>
+                                    <div>
+                                        <div class="fw-bold" style="font-size:0.875rem;">Sandip Gavit</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td style="padding:1rem 1.25rem;">
+                                <span style="font-size:0.8rem;font-weight:600;background:#f1f5f9;color:var(--text-muted);padding:3px 10px;border-radius:6px;font-family:monospace;">
+                                    T53409                                </span>
+                            </td>
+                            <td style="padding:1rem 1.25rem;">
+                                <span style="font-size:0.78rem;font-weight:600;background:rgba(99,102,241,0.1);color:var(--primary);padding:4px 10px;border-radius:6px;">
+                                    C++ Programming                                </span>
+                            </td>
+                            <td style="padding:1rem 1.25rem; font-size:0.82rem; color:var(--text-muted);">
+                                <i class="far fa-calendar-alt me-1"></i>
+                                09 May, 2026                            </td>
+                            <td style="padding:1rem 1.5rem; text-align:center;">
+                                <a href="view_student.php?id=24"
+                                   class="btn btn-sm btn-primary rounded-pill px-3"
+                                   style="font-size:0.8rem;">
+                                    <i class="fas fa-eye me-1"></i>View Profile
+                                </a>
+                            </td>
+                        </tr>
+                                            <tr style="transition:background 0.15s;">
+                            <td style="padding:1rem 1.5rem; color:var(--text-muted); font-size:0.8rem; font-weight:600;">
+                                2                            </td>
+                            <td style="padding:1rem 1.25rem;">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,rgba(99,102,241,0.15),rgba(79,70,229,0.08));display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--primary);font-size:0.95rem;flex-shrink:0;">
+                                        G                                    </div>
+                                    <div>
+                                        <div class="fw-bold" style="font-size:0.875rem;">Ganesh Tarle</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td style="padding:1rem 1.25rem;">
+                                <span style="font-size:0.8rem;font-weight:600;background:#f1f5f9;color:var(--text-muted);padding:3px 10px;border-radius:6px;font-family:monospace;">
+                                    T95673                                </span>
+                            </td>
+                            <td style="padding:1rem 1.25rem;">
+                                <span style="font-size:0.78rem;font-weight:600;background:rgba(99,102,241,0.1);color:var(--primary);padding:4px 10px;border-radius:6px;">
+                                    Data Science with AI                                </span>
+                            </td>
+                            <td style="padding:1rem 1.25rem; font-size:0.82rem; color:var(--text-muted);">
+                                <i class="far fa-calendar-alt me-1"></i>
+                                08 May, 2026                            </td>
+                            <td style="padding:1rem 1.5rem; text-align:center;">
+                                <a href="view_student.php?id=21"
+                                   class="btn btn-sm btn-primary rounded-pill px-3"
+                                   style="font-size:0.8rem;">
+                                    <i class="fas fa-eye me-1"></i>View Profile
+                                </a>
+                            </td>
+                        </tr>
+                                                </tbody>
+        </table>
+                    <div class="px-4 py-3 d-flex align-items-center justify-content-between" style="border-top:1px solid var(--border);background:#fafafa;">
+                <span style="font-size:0.8rem;color:var(--text-muted);">Showing <strong>2</strong> students</span>
+                <span style="font-size:0.75rem;color:var(--text-light);">TechnoHacks ERP v2.0</span>
+            </div>
+            </div>
+</main>
+
+<style>
+.custom-table-container tbody tr:hover { background: #fafbff; }
+.form-select, .form-control {
+    border-color: var(--border);
+    font-size: 0.875rem;
+    color: var(--text-main);
+}
+.form-select:focus, .form-control:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+}
+</style>
+
+    </div> <!-- End d-flex -->
+    <script src="../assets/js/main.js"></script>
+</body>
+</html>

@@ -442,7 +442,7 @@ $installments_list = $inst_stmt->fetchAll();
                         <td><?php echo htmlspecialchars($s['email'] ?? 'N/A'); ?></td>
                     </tr>
                     <tr>
-                        <th>Current Address</th>
+                        <th>Address</th>
                         <td colspan="3"><?php echo htmlspecialchars($s['address'] ?? 'N/A'); ?></td>
                     </tr>
                     <tr>
@@ -514,10 +514,7 @@ $installments_list = $inst_stmt->fetchAll();
 
             <!-- Updated Declaration -->
             <div class="declaration-box">
-                <strong>DECLARATION:</strong> I hereby declare that the information provided by me is true and correct to
-                the best of my knowledge. I agree to follow the rules, discipline, and code of conduct of the institute. I
-                am committed to maintaining regular attendance, active participation, and a positive learning attitude
-                throughout the training program.
+                <strong>DECLARATION:</strong> I confirm that the information provided by me is true and correct. I have read and agree to the above Terms & Conditions and institute rules.
             </div>
 
             <!-- Signatures -->

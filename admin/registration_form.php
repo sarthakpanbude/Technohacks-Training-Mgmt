@@ -24,7 +24,6 @@ if (!$student) {
 $registration_id = "TH-REG-" . str_pad($student['id'], 5, '0', STR_PAD_LEFT);
 $registration_date = date('d/m/Y', strtotime($student['reg_date'] ?: $student['created_at']));
 $course_name = $student['course_name'] ?? 'Not Enrolled';
-$batch_name = $student['batch_name'] ?? 'Not Assigned';
 
 ?>
 <!DOCTYPE html>
@@ -283,20 +282,19 @@ $batch_name = $student['batch_name'] ?? 'Not Assigned';
             <div class="customer-phone">Mobile: <?php echo $student['phone'] ?? 'N/A'; ?></div>
             <div class="customer-phone">Email: <?php echo $student['email'] ?? 'N/A'; ?></div>
             <div class="customer-phone">Enrollment: <?php echo $student['enrollment_no'] ?? 'N/A'; ?></div>
+            <div class="customer-phone">Address: <?php echo htmlspecialchars($student['address'] ?? 'N/A'); ?></div>
         </div>
 
         <table class="table services-table">
             <thead>
                 <tr>
                     <th>PROGRAM DETAILS</th>
-                    <th class="text-center">BATCH</th>
                     <th class="text-end">STATUS</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
                     <td><?php echo strtoupper($course_name); ?> ( OFFLINE )</td>
-                    <td class="text-center"><?php echo strtoupper($batch_name); ?></td>
                     <td class="text-end"><?php echo strtoupper($student['admission_status']); ?></td>
                 </tr>
             </tbody>

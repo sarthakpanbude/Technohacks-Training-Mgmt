@@ -4,6 +4,8 @@ checkAuth('admin');
 require_once '../config/db.php';
 
 $student_id = $_GET['id'] ?? null;
+$inst_id = $_GET['inst_id'] ?? null;
+
 // Use the students_basic and student_fees tables as per the existing logic in this file
 $stmt = $pdo->prepare("SELECT sb.full_name, sb.course, sf.* FROM students_basic sb JOIN student_fees sf ON sb.student_id = sf.student_id WHERE sb.student_id = ?");
 $stmt->execute([$student_id]);
@@ -11,6 +13,18 @@ $s = $stmt->fetch();
 
 if (!$s) {
     die("Student or fee details not found.");
+}
+
+// Fetch Discount info if available
+$stmt = $pdo->prepare("SELECT * FROM referral_bonuses WHERE referred_id = (SELECT id FROM students WHERE enrollment_no = ?)");
+$stmt->execute([$student_id]);
+$discount_info = $stmt->fetch();
+
+$installment_data = null;
+if ($inst_id) {
+    $stmt = $pdo->prepare("SELECT * FROM installments WHERE id = ?");
+    $stmt->execute([$inst_id]);
+    $installment_data = $stmt->fetch();
 }
 
 // Function to convert number to words (Indian Rupees style)
@@ -60,11 +74,36 @@ function numberToWords($number) {
 
 $course_name = $s['course'] ?? 'Training Course';
 $total_fees = $s['total_fee'];
-$paid_amount = $s['paid_fee'];
-$balance = $s['pending_fee'];
-$invoice_no = "RCPT-" . date('Y') . $s['id'];
-$invoice_date = date('d/m/Y');
-$due_date = $s['next_installment_date'] ? date('d/m/Y', strtotime($s['next_installment_date'])) : date('d/m/Y', strtotime('+30 days'));
+
+if ($installment_data) {
+    $paid_amount = $installment_data['amount'];
+    $invoice_no = "RCPT-INST-" . $installment_data['id'];
+    $invoice_date = date('d/m/Y', strtotime($installment_data['payment_date'] ?? 'now'));
+    
+    // Calculate balance at the time of this installment
+    // We sum unique payments by receipt number to avoid double counting if a record exists in both tables
+    $stmt = $pdo->prepare("
+        SELECT SUM(amount) FROM (
+            SELECT amount, receipt_no, payment_date FROM payments WHERE student_id = (SELECT id FROM students WHERE enrollment_no = ?)
+            UNION
+            SELECT amount, receipt_no, payment_date FROM invoices WHERE student_id = (SELECT id FROM students WHERE enrollment_no = ?)
+        ) as unique_payments 
+        WHERE payment_date <= ?
+    ");
+    $stmt->execute([$student_id, $student_id, $installment_data['payment_date'] ?? date('Y-m-d H:i:s')]);
+    $accumulated_paid = $stmt->fetchColumn() ?: 0;
+    
+    $previous_paid = $accumulated_paid - $paid_amount;
+    $balance = $total_fees - $accumulated_paid;
+    $due_date = date('d/m/Y', strtotime($installment_data['due_date']));
+} else {
+    $paid_amount = $s['paid_fee'];
+    $previous_paid = 0;
+    $balance = $s['pending_fee'];
+    $invoice_no = "RCPT-" . date('Y') . $s['id'];
+    $invoice_date = date('d/m/Y');
+    $due_date = $s['next_installment_date'] ? date('d/m/Y', strtotime($s['next_installment_date'])) : date('d/m/Y', strtotime('+30 days'));
+}
 
 ?>
 <!DOCTYPE html>
@@ -326,7 +365,7 @@ $due_date = $s['next_installment_date'] ? date('d/m/Y', strtotime($s['next_insta
     <div class="bill-container">
         <div class="bill-header">
             <div class="bill-of-supply">
-                <span>BILL OF SUPPLY</span>
+                <span><?php echo $installment_data ? 'INSTALLMENT RECEIPT' : 'BILL OF SUPPLY'; ?></span>
                 <div class="original-tag"><?php echo $copy_type; ?></div>
             </div>
             <div class="slogan">Let's Grow Together...!!</div>
@@ -337,7 +376,7 @@ $due_date = $s['next_installment_date'] ? date('d/m/Y', strtotime($s['next_insta
                 <img src="../assets/img/logo.png" alt="TechnoHacks">
             </div>
             <div class="company-details">
-                <h1>TechnoHacks EduTech</h1>
+                <h1>TechnoHacks Solutions</h1>
                 <div class="company-info">
                     <p>10, 2nd Floor, Devikrupa Apartment, Vidya Vikas Circle, Gangapur Rd, Nashik, Maharashtra 422005</p>
                     <p><strong>Mobile:</strong> 082089 37014</p>
@@ -347,15 +386,28 @@ $due_date = $s['next_installment_date'] ? date('d/m/Y', strtotime($s['next_insta
         </div>
 
         <div class="invoice-details-bar">
-            <div class="detail-item"><strong>Invoice No.:</strong> <?php echo $invoice_no; ?></div>
-            <div class="detail-item"><strong>Invoice Date:</strong> <?php echo $invoice_date; ?></div>
-            <div class="detail-item"><strong>Due Date:</strong> <?php echo $due_date; ?></div>
+            <div class="detail-item"><strong><?php echo $installment_data ? 'Receipt No.:' : 'Invoice No.:'; ?></strong> <?php echo $invoice_no; ?></div>
+            <div class="detail-item"><strong>Date:</strong> <?php echo $invoice_date; ?></div>
+            <?php if (!$installment_data || $installment_data['status'] == 'Pending'): ?>
+                <div class="detail-item"><strong>Due Date:</strong> <?php echo $due_date; ?></div>
+            <?php endif; ?>
         </div>
 
         <div class="bill-to-section">
-            <h6>BILL TO</h6>
-            <div class="customer-name"><?php echo htmlspecialchars($s['full_name']); ?></div>
-            <div class="customer-phone">Student ID: <?php echo $s['student_id']; ?></div>
+            <div class="d-flex justify-content-between">
+                <div>
+                    <h6>BILL TO</h6>
+                    <div class="customer-name"><?php echo htmlspecialchars($s['full_name']); ?></div>
+                    <div class="customer-phone">Student ID: <?php echo $s['student_id']; ?></div>
+                </div>
+                <?php if ($installment_data && $installment_data['transaction_id']): ?>
+                <div class="text-end">
+                    <h6>REFERENCE</h6>
+                    <div class="customer-name" style="font-size: 14px;"><?php echo htmlspecialchars($installment_data['transaction_id']); ?></div>
+                    <div class="customer-phone">Transaction ID</div>
+                </div>
+                <?php endif; ?>
+            </div>
         </div>
 
         <table class="table services-table">
@@ -386,17 +438,34 @@ $due_date = $s['next_installment_date'] ? date('d/m/Y', strtotime($s['next_insta
         <div class="totals-section">
             <div class="total-row">
                 <div class="total-label">TAXABLE AMOUNT</div>
-                <div class="total-value">₹ <?php echo number_format($total_fees, 2); ?></div>
+                <div class="total-value">₹ <?php echo number_format($discount_info ? $discount_info['original_fee'] : $total_fees, 2); ?></div>
             </div>
+            <?php if ($discount_info && $discount_info['discount_amount'] > 0): ?>
+            <div class="total-row text-primary">
+                <div class="total-label">DISCOUNT APPLIED</div>
+                <div class="total-value">- ₹ <?php echo number_format($discount_info['discount_amount'], 2); ?></div>
+            </div>
+            <?php endif; ?>
             <div class="total-row grand-total">
-                <div class="total-label">TOTAL AMOUNT</div>
+                <div class="total-label">TOTAL COURSE FEE</div>
                 <div class="total-value">₹ <?php echo number_format($total_fees, 2); ?></div>
             </div>
+            <?php if ($installment_data): ?>
             <div class="total-row">
+                <div class="total-label">Previously Paid</div>
+                <div class="total-value">₹ <?php echo number_format($previous_paid, 2); ?></div>
+            </div>
+            <div class="total-row text-success">
+                <div class="total-label">Current Payment</div>
+                <div class="total-value">₹ <?php echo number_format($paid_amount, 2); ?></div>
+            </div>
+            <?php else: ?>
+            <div class="total-row text-success">
                 <div class="total-label">Received Amount</div>
                 <div class="total-value">₹ <?php echo number_format($paid_amount, 2); ?></div>
             </div>
-            <div class="total-row text-danger">
+            <?php endif; ?>
+            <div class="total-row text-danger fw-bold border-top pt-1 mt-1">
                 <div class="total-label">Pending Balance</div>
                 <div class="total-value">₹ <?php echo number_format($balance, 2); ?></div>
             </div>
@@ -440,7 +509,7 @@ $due_date = $s['next_installment_date'] ? date('d/m/Y', strtotime($s['next_insta
                 <img src="https://upload.wikimedia.org/wikipedia/commons/3/3a/Jon_Kirsch%27s_Signature.png" class="signature-img" style="opacity: 0.7; filter: grayscale(1);">
             </div>
             <div class="signature-label">AUTHORISED SIGNATORY FOR</div>
-            <div class="signature-company">TechnoHacks EduTech</div>
+            <div class="signature-company">TechnoHacks Solutions</div>
         </div>
     </div>
     <?php if ($index == 0): ?>

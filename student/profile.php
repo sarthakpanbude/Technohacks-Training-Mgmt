@@ -42,7 +42,7 @@ include '../includes/sidebar.php';
                 <img src="../assets/img/default.png" alt="Profile" class="rounded-circle border mb-3" width="120" height="120">
                 <h4 class="fw-bold"><?php echo htmlspecialchars($userData['full_name']); ?></h4>
                 <p class="text-muted mb-1"><?php echo htmlspecialchars($userData['email']); ?></p>
-                <span class="badge bg-primary rounded-pill mb-3">ID: <?php echo $userData['enrollment_no'] ?? 'Pending'; ?></span>
+                <span class="badge bg-primary rounded-pill mb-3">Student / Refer Id: <?php echo $userData['enrollment_no'] ?? 'Pending'; ?></span>
                 
                 <hr>
                 
@@ -50,6 +50,50 @@ include '../includes/sidebar.php';
                     <p class="small mb-1"><i class="fas fa-calendar-check text-muted me-2"></i>Joined: <?php echo date('M d, Y', strtotime($userData['created_at'])); ?></p>
                     <p class="small mb-1"><i class="fas fa-info-circle text-muted me-2"></i>Status: <span class="text-capitalize text-success fw-bold"><?php echo $userData['admission_status']; ?></span></p>
                 </div>
+
+                <hr>
+
+                <!-- Referral & Earn Section -->
+                <div class="referral-section text-start p-3 bg-light rounded-4">
+                    <h6 class="fw-bold mb-2 small"><i class="fas fa-gift text-primary me-2"></i>Referral & Earn</h6>
+                    <div class="mb-3">
+                        <label class="x-small text-muted fw-bold text-uppercase mb-1" style="font-size: 0.6rem;">Your Referral Code</label>
+                        <div class="input-group input-group-sm">
+                            <input type="text" id="refCode" class="form-control fw-bold text-center bg-white" value="<?php echo $userData['referral_code'] ?? 'N/A'; ?>" readonly>
+                            <button class="btn btn-primary" onclick="copyRefCode()"><i class="fas fa-copy"></i></button>
+                        </div>
+                    </div>
+                    <?php
+                    $bonusStats = $pdo->prepare("
+                        SELECT 
+                            SUM(CASE WHEN status = 'Approved' THEN bonus_amount ELSE 0 END) as earned,
+                            SUM(CASE WHEN status IN ('Pending', 'Pending Full Payment', 'Waiting Refund Period') THEN bonus_amount ELSE 0 END) as pending
+                        FROM referral_bonuses 
+                        WHERE referrer_id = ?
+                    ");
+                    $bonusStats->execute([$userData['enrollment_no']]);
+                    $bStats = $bonusStats->fetch();
+                    ?>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="x-small text-muted d-block" style="font-size: 0.6rem;">Earned</span>
+                            <span class="fw-bold text-success">₹<?php echo number_format($bStats['earned'] ?? 0, 2); ?></span>
+                        </div>
+                        <div class="text-end">
+                            <span class="x-small text-muted d-block" style="font-size: 0.6rem;">Pending</span>
+                            <span class="fw-bold text-warning">₹<?php echo number_format($bStats['pending'] ?? 0, 2); ?></span>
+                        </div>
+                    </div>
+                </div>
+                <script>
+                    function copyRefCode() {
+                        var copyText = document.getElementById("refCode");
+                        copyText.select();
+                        copyText.setSelectionRange(0, 99999);
+                        navigator.clipboard.writeText(copyText.value);
+                        alert("Code copied: " + copyText.value);
+                    }
+                </script>
             </div>
         </div>
         

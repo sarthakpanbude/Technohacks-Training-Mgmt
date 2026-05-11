@@ -50,12 +50,27 @@ $error = "";
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['confirm_admission'])) {
     try {
         $pdo->beginTransaction();
+
+        // Check for Duplicate Student (Email or Mobile)
+        $email = $_POST['email'];
+        $mobile = $_POST['mobile'];
         
-        // Generate Student ID
-        $year = date('Y');
+        $check_duplicate = $pdo->prepare("SELECT id FROM users WHERE email = ?");
+        $check_duplicate->execute([$email]);
+        if ($check_duplicate->fetch()) {
+            throw new Exception("A student with this email address is already admitted.");
+        }
+
+        $check_mobile = $pdo->prepare("SELECT id FROM students WHERE phone = ?");
+        $check_mobile->execute([$mobile]);
+        if ($check_mobile->fetch()) {
+            throw new Exception("A student with this mobile number is already admitted.");
+        }
+        
+        // Generate Student ID (Short Format: T + 5 random digits)
         do {
-            $rand = rand(1000, 9999);
-            $student_id = "STU" . $year . $rand;
+            $rand = rand(10000, 99999);
+            $student_id = "T" . $rand;
             $check = $pdo->prepare("SELECT id FROM students_basic WHERE student_id = ?");
             $check->execute([$student_id]);
         } while ($check->fetch());
@@ -78,15 +93,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['confirm_admission'])) 
         $course_name = $_POST['course_type'] == 'Other' ? $_POST['other_course'] : $_POST['course'];
 
         // 1. Basic & Personal (Providing defaults for removed fields to prevent DB errors)
-        $stmt = $pdo->prepare("INSERT INTO students_basic (student_id, full_name, father_name, mother_name, dob, gender, email, course, start_date, duration) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$student_id, $_POST['full_name'], '', '', $_POST['dob'], $_POST['gender'], $_POST['email'], $course_name, $_POST['start_date'], $_POST['duration']]);
+        $stmt = $pdo->prepare("INSERT INTO students_basic (student_id, full_name, dob, gender, email, course, start_date, duration) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$student_id, $_POST['full_name'], $_POST['dob'], $_POST['gender'], $_POST['email'], $course_name, $_POST['start_date'], $_POST['duration']]);
 
-        $stmt = $pdo->prepare("INSERT INTO personal_details (student_id, category, nationality, address, permanent_address, city, state) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$student_id, 'General', 'Indian', $_POST['address'], $_POST['permanent_address'], $_POST['city'], $_POST['state']]);
+        $stmt = $pdo->prepare("INSERT INTO personal_details (student_id, category, nationality, address, permanent_address) VALUES (?, ?, ?, ?, ?)");
+        $stmt->execute([$student_id, 'General', 'Indian', $_POST['address'], $_POST['address']]);
 
         // 2. Education
-        $stmt = $pdo->prepare("INSERT INTO education (student_id, qualification, college_name, passing_year, status) VALUES (?, ?, ?, ?, ?)");
-        $stmt->execute([$student_id, $_POST['qualification'], $_POST['college_name'], $_POST['passing_year'], $_POST['edu_status']]);
+        $stmt = $pdo->prepare("INSERT INTO education (student_id, qualification, college_name, passing_year) VALUES (?, ?, ?, ?)");
+        $stmt->execute([$student_id, $_POST['qualification'], $_POST['college_name'], $_POST['passing_year']]);
 
         // 3. Documents
         if ($photo_path) {
@@ -121,8 +136,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['confirm_admission'])) 
             $user_id = $pdo->lastInsertId();
         }
 
-        $stmt = $pdo->prepare("INSERT INTO students (user_id, enrollment_no, dob, phone, address, admission_status, referral_id, course) VALUES (?, ?, ?, ?, ?, 'enrolled', ?, ?)");
-        $stmt->execute([$user_id, $student_id, $_POST['dob'], $_POST['mobile'], $_POST['address'], (!empty($_POST['referral_id']) ? $_POST['referral_id'] : null), $course_name]);
+        $stmt = $pdo->prepare("INSERT INTO students (user_id, enrollment_no, referral_code, dob, phone, address, admission_status, referral_id, course) VALUES (?, ?, ?, ?, ?, ?, 'enrolled', ?, ?)");
+        $stmt->execute([$user_id, $student_id, $student_id, $_POST['dob'], $_POST['mobile'], $_POST['address'], (!empty($_POST['referral_id']) ? $_POST['referral_id'] : null), $course_name]);
         $main_stu_id = $pdo->lastInsertId();
 
         // 6. Referral Bonus
@@ -132,12 +147,41 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['confirm_admission'])) 
             $stmt->execute([$_POST['referral_id'], $student_id, $bonus]);
         }
 
-        // 7. Invoice
+        // 7. Invoice & Referral Bonus Record
         if ($paid > 0) {
             // Generate a more unique receipt number to avoid duplicates
             $rcpt = "RCPT-" . date('Y') . "-" . str_pad($main_stu_id, 4, '0', STR_PAD_LEFT) . "-" . rand(10, 99);
             $stmt = $pdo->prepare("INSERT INTO invoices (student_id, receipt_no, amount, payment_mode) VALUES (?, ?, ?, ?)");
             $stmt->execute([$main_stu_id, $rcpt, $paid, $_POST['payment_mode']]);
+        }
+
+        // Handle Referral Bonus logic
+        if (!empty($_POST['referral_id'])) {
+            $referrer_id = $_POST['referral_id'];
+            $referred_id = $student_id;
+            
+            $original_fee = $_POST['total_fee']; // This is the final fee after discount
+            $discount_amount = $_POST['referral_discount_applied'] ? ($original_fee / 0.95) * 0.05 : 0; 
+            // Wait, the logic for discount should be: Original -> 5% disc -> Final.
+            // If they entered a code, we stored the final fee in total_fee.
+            
+            $bonus_amount = $original_fee * 0.10; // 10% of final fee
+            
+            // Calculate Refund Expiry Date based on fee (7 days for small courses < 6000, else 14 days)
+            $days = ($original_fee < 6000) ? 7 : 14;
+            $start_date = $_POST['start_date'];
+            $refund_expiry = date('Y-m-d', strtotime($start_date . " + $days days"));
+
+            $is_fully_paid = ($pending <= 0) ? 1 : 0;
+            $status = 'Pending';
+            if (!$is_fully_paid) {
+                $status = 'Pending Full Payment';
+            } else {
+                $status = 'Waiting Refund Period';
+            }
+
+            $stmt = $pdo->prepare("INSERT INTO referral_bonuses (referrer_id, referred_id, original_fee, discount_amount, final_fee, bonus_amount, status, refund_expiry_date, is_fully_paid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$referrer_id, $referred_id, ($original_fee + $discount_amount), $discount_amount, $original_fee, $bonus_amount, $status, $refund_expiry, $is_fully_paid]);
         }
 
         // 8. Save Installments
@@ -189,9 +233,6 @@ include '../includes/sidebar.php';
                 <?php endif; ?>
             </p>
         </div>
-        <a href="admit.php?new=1" class="btn btn-primary rounded-pill px-4 shadow-sm">
-            <i class="fas fa-plus me-2"></i>New Admission
-        </a>
     </div>
 
     <?php if ($error): ?>
@@ -224,39 +265,24 @@ include '../includes/sidebar.php';
                 <!-- Tab 1: Basic & Personal -->
                 <div class="tab-pane fade show active" id="basic" role="tabpanel">
                     <div class="row g-3">
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold">Full Name</label>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Full Name <span class="text-danger">*</span></label>
                             <input type="text" name="full_name" class="form-control" value="<?php echo htmlspecialchars($inquiry['name']); ?>" required>
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold">Mobile Number</label>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Mobile Number <span class="text-danger">*</span></label>
                             <input type="text" name="mobile" class="form-control" value="<?php echo htmlspecialchars($inquiry['mobile']); ?>" required>
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold">Email ID</label>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Email ID <span class="text-danger">*</span></label>
                             <input type="email" name="email" class="form-control" value="<?php echo htmlspecialchars($inquiry['email'] ?? ''); ?>" required>
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold">Qualification</label>
-                            <input type="text" name="qualification" class="form-control" placeholder="e.g. BE Computer Science" required>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold">Status</label>
-                            <select name="edu_status" class="form-select" required>
-                                <option value="Completed">Completed</option>
-                                <option value="Pursuing">Pursuing</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold">Passing Year</label>
-                            <input type="text" name="passing_year" class="form-control" placeholder="YYYY" required>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold">Date of Birth</label>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Date of Birth <span class="text-danger">*</span></label>
                             <input type="date" name="dob" class="form-control" required>
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold">Gender</label>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Gender <span class="text-danger">*</span></label>
                             <select name="gender" class="form-select" required>
                                 <option value="">Select</option>
                                 <option value="Male">Male</option>
@@ -264,31 +290,21 @@ include '../includes/sidebar.php';
                                 <option value="Other">Other</option>
                             </select>
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold">City</label>
-                            <input type="text" name="city" class="form-control" placeholder="Enter city" required>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold">State</label>
-                            <input type="text" name="state" class="form-control" placeholder="Enter state" required>
-                        </div>
-                        <div class="col-md-8">
-                            <label class="form-label small fw-bold">College/University Name</label>
-                            <input type="text" name="college_name" class="form-control" placeholder="Enter current or last attended college" required>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Qualification <span class="text-danger">*</span></label>
+                            <input type="text" name="qualification" class="form-control" placeholder="e.g. BE Computer Science" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold">Current Address</label>
-                            <textarea name="address" id="curr_addr" class="form-control" rows="2" required></textarea>
+                            <label class="form-label small fw-bold">Passing Year <span class="text-danger">*</span></label>
+                            <input type="text" name="passing_year" class="form-control" placeholder="YYYY" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold d-flex justify-content-between">
-                                Permanent Address
-                                <div class="form-check m-0">
-                                    <input class="form-check-input" type="checkbox" id="sync_addr" onchange="syncAddress()">
-                                    <label class="form-check-label text-muted small" for="sync_addr">Same as current</label>
-                                </div>
-                            </label>
-                            <textarea name="permanent_address" id="perm_addr" class="form-control" rows="2" required></textarea>
+                            <label class="form-label small fw-bold">College/University Name <span class="text-danger">*</span></label>
+                            <input type="text" name="college_name" class="form-control" placeholder="Enter college" required>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label small fw-bold">Address <span class="text-danger">*</span></label>
+                            <textarea name="address" class="form-control" rows="2" required placeholder="Enter full address..."></textarea>
                         </div>
                     </div>
                     <div class="mt-4 text-end">
@@ -395,6 +411,10 @@ include '../includes/sidebar.php';
                                         <span class="text-muted small">Discount Applied:</span>
                                         <span class="fw-bold text-danger" id="discountDisplay">-₹0.00</span>
                                     </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-2" id="referralDiscountRow" style="display: none !important;">
+                                        <span class="text-muted small">Referral Discount (5%):</span>
+                                        <span class="fw-bold text-success" id="referralDiscountDisplay">-₹0.00</span>
+                                    </div>
                                     <div class="d-flex justify-content-between align-items-center">
                                         <span class="fw-bold h5 mb-0">Total Payable Fee:</span>
                                         <input type="hidden" name="total_fee" id="finalTotalFee">
@@ -441,16 +461,14 @@ include '../includes/sidebar.php';
                                 </div>
 
                                 <div class="mt-4 pt-3 border-top">
-                                    <label class="form-label small fw-bold">Referral Student (Optional)</label>
-                                    <select name="referral_id" class="form-select bg-white">
-                                        <option value="">-- No Referrer --</option>
-                                        <?php
-                                        $referrers = $pdo->query("SELECT s.enrollment_no, u.full_name FROM students s JOIN users u ON s.user_id = u.id WHERE s.admission_status = 'enrolled' OR s.admission_status = 'active' ORDER BY u.full_name ASC")->fetchAll();
-                                        foreach($referrers as $r): ?>
-                                            <option value="<?php echo $r['enrollment_no']; ?>"><?php echo $r['enrollment_no']; ?> - <?php echo htmlspecialchars($r['full_name']); ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                    <small class="text-muted" style="font-size: 0.7rem;">Select the student who referred this new admission.</small>
+                                    <label class="form-label small fw-bold">Referral ID (Optional)</label>
+                                    <div class="input-group">
+                                        <input type="text" name="referral_code_input" id="referralCode" class="form-control bg-white" placeholder="Enter referral code">
+                                        <button type="button" class="btn btn-outline-primary" onclick="validateReferralCode()">Apply</button>
+                                    </div>
+                                    <input type="hidden" name="referral_id" id="referralId">
+                                    <input type="hidden" name="referral_discount_applied" id="referralDiscountApplied" value="0">
+                                    <small id="referralStatus" class="text-muted" style="font-size: 0.7rem;">Enter a valid code to get 5% discount.</small>
                                 </div>
                             </div>
                         </div>
@@ -559,10 +577,45 @@ document.getElementById('baseFeeDisplay').addEventListener('input', function() {
     calculateFinalFee();
 });
 
+function validateReferralCode() {
+    const code = document.getElementById('referralCode').value;
+    const status = document.getElementById('referralStatus');
+    const referralId = document.getElementById('referralId');
+    const discInput = document.getElementById('referralDiscountApplied');
+
+    if (!code) {
+        status.innerHTML = "Enter a valid code to get 5% discount.";
+        status.className = "text-muted";
+        referralId.value = "";
+        discInput.value = "0";
+        calculateFinalFee();
+        return;
+    }
+
+    fetch('actions/validate_referral.php?code=' + code)
+        .then(response => response.json())
+        .then(data => {
+            if (data.valid) {
+                status.innerHTML = `<i class="fas fa-check-circle me-1"></i> Valid code! 5% discount applied. (Referrer: ${data.name})`;
+                status.className = "text-success small fw-bold";
+                referralId.value = data.enrollment_no;
+                discInput.value = "1";
+            } else {
+                status.innerHTML = `<i class="fas fa-times-circle me-1"></i> Invalid or expired referral code.`;
+                status.className = "text-danger small fw-bold";
+                referralId.value = "";
+                discInput.value = "0";
+            }
+            calculateFinalFee();
+        });
+}
+
 function calculateFinalFee() {
     const std = parseFloat(document.getElementById('stdFee').value) || 0;
     const discType = document.getElementById('discountType').value;
     const discVal = parseFloat(document.getElementById('discountValue').value) || 0;
+    const referralDiscountApplied = document.getElementById('referralDiscountApplied').value === "1";
+    
     let discount = 0;
 
     if (discType === 'percent') {
@@ -571,7 +624,21 @@ function calculateFinalFee() {
         discount = discVal;
     }
 
-    const final = Math.max(0, std - discount);
+    let final = Math.max(0, std - discount);
+
+    // Apply Referral Discount (5%)
+    if (referralDiscountApplied) {
+        const refDisc = final * 0.05;
+        final -= refDisc;
+        
+        document.getElementById('referralDiscountRow').style.display = 'flex';
+        document.getElementById('referralDiscountRow').style.setProperty('display', 'flex', 'important');
+        document.getElementById('referralDiscountDisplay').textContent = '-₹' + refDisc.toLocaleString('en-IN', {minimumFractionDigits: 2});
+    } else {
+        document.getElementById('referralDiscountRow').style.display = 'none';
+        document.getElementById('referralDiscountRow').style.setProperty('display', 'none', 'important');
+    }
+
     document.getElementById('discountDisplay').textContent = '-₹' + discount.toLocaleString('en-IN', {minimumFractionDigits: 2});
     document.getElementById('finalFeeDisplay').textContent = '₹' + final.toLocaleString('en-IN', {minimumFractionDigits: 2});
     document.getElementById('finalTotalFee').value = final;
@@ -647,11 +714,65 @@ function validateInstallmentTotal() {
 }
 
 function switchTab(tabId) {
-    const tabEl = document.getElementById(tabId);
-    if (tabEl) {
-        bootstrap.Tab.getInstance(tabEl) ? bootstrap.Tab.getInstance(tabEl).show() : new bootstrap.Tab(tabEl).show();
+    const targetTab = document.getElementById(tabId);
+    if (!targetTab) return;
+
+    // Current active tab
+    const activeTab = document.querySelector('#admissionTabs .nav-link.active');
+    const tabs = Array.from(document.querySelectorAll('#admissionTabs .nav-link'));
+    const activeIdx = tabs.indexOf(activeTab);
+    const targetIdx = tabs.indexOf(targetTab);
+
+    // If moving forward, validate current section
+    if (targetIdx > activeIdx) {
+        const activePaneId = activeTab.getAttribute('data-bs-target').substring(1);
+        const activePane = document.getElementById(activePaneId);
+        const inputs = activePane.querySelectorAll('input[required], select[required], textarea[required]');
+        
+        let firstInvalid = null;
+        for (let input of inputs) {
+            if (!input.checkValidity()) {
+                if (!firstInvalid) firstInvalid = input;
+                input.classList.add('is-invalid');
+            } else {
+                input.classList.remove('is-invalid');
+            }
+        }
+
+        if (firstInvalid) {
+            alert("Please fill all required fields in this section before proceeding.");
+            firstInvalid.reportValidity();
+            firstInvalid.focus();
+            return;
+        }
     }
+
+    const tab = bootstrap.Tab.getOrCreateInstance(targetTab);
+    tab.show();
+    window.scrollTo(0, 0);
 }
+
+// Also prevent clicking on tab pills directly if validation fails
+document.addEventListener('DOMContentLoaded', function() {
+    const tabLinks = document.querySelectorAll('#admissionTabs .nav-link');
+    tabLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            const activeTab = document.querySelector('#admissionTabs .nav-link.active');
+            const tabs = Array.from(tabLinks);
+            const activeIdx = tabs.indexOf(activeTab);
+            const targetIdx = tabs.indexOf(this);
+
+            if (targetIdx > activeIdx) {
+                // We'll let switchTab handle it if we call it, but since it has data-bs-toggle, 
+                // Bootstrap might handle it first. 
+                // So we stop propagation and call switchTab manually.
+                e.preventDefault();
+                e.stopPropagation();
+                switchTab(this.id);
+            }
+        });
+    });
+});
 
 document.getElementById('admissionForm').addEventListener('submit', function(e) {
     if (!this.checkValidity()) {
