@@ -202,7 +202,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <div class="inquiry-box">
             <h6><i class="fas fa-graduation-cap me-2" style="color:#6366f1;"></i>Interested in a Course?</h6>
             <p>Submit your inquiry and our team will get in touch shortly.</p>
-            <a href="inquiry.php" class="btn btn-primary rounded-pill px-4 w-100" style="font-size:0.85rem;">
+            <a href="inquiry.php" class="btn btn-primary rounded-pill px-4 w-100 text-decoration-none shadow-sm" style="font-size:0.85rem; color: white !important;">
                 <i class="fas fa-paper-plane me-2"></i>Course Inquiry Form
             </a>
         </div>
@@ -220,9 +220,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 </div>
             </div>
             <div class="mb-4">
-                <div class="d-flex justify-content-between align-items-center mb-1">
+                <div class="d-flex justify-content-between align-items-center mb-2">
                     <label class="field-label mb-0">Password</label>
-                    <a href="#" style="font-size:0.75rem;color:#6366f1;text-decoration:none;font-weight:600;">Forgot?</a>
+                    <a href="#" class="text-decoration-none" style="font-size:0.75rem;color:#6366f1;font-weight:600;">Forgot?</a>
                 </div>
                 <div class="input-wrap">
                     <span class="input-icon"><i class="fas fa-lock"></i></span>
@@ -235,9 +235,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </form>
 
         <!-- Footer -->
-        <div class="text-center mt-4 pt-3" style="border-top:1px solid #f1f5f9;">
-            <p style="font-size:0.75rem;color:#94a3b8;margin:0 0 6px;">© 2026 TechnoHacks Solutions Pvt. Ltd.</p>
-            <a href="register.php" style="font-size:0.78rem;color:#6366f1;text-decoration:none;font-weight:600;">
+        <div class="text-center mt-5 pt-4" style="border-top:1px solid #f1f5f9;">
+            <p style="font-size:0.75rem;color:#94a3b8;margin:0 0 8px;">© 2026 TechnoHacks Solutions Pvt. Ltd.</p>
+            <a href="register.php" class="text-decoration-none" style="font-size:0.78rem;color:#6366f1;font-weight:600;">
                 Create Admin Account <i class="fas fa-arrow-right ms-1" style="font-size:0.65rem;"></i>
             </a>
         </div>

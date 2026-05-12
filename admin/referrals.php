@@ -6,6 +6,13 @@ require_once '../config/db.php';
 $pageTitle = "Referral & Earn";
 $activePage = "referrals";
 
+// Check if Referral System is Enabled
+$sys_settings = $pdo->query("SELECT referral_system_enabled FROM settings WHERE id=1")->fetch();
+if (!($sys_settings['referral_system_enabled'] ?? 1)) {
+    header("Location: dashboard.php");
+    exit;
+}
+
 // Run automation logic on page load
 include 'actions/referral_automation.php';
 

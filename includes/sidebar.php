@@ -1,5 +1,7 @@
 <?php
 $role = $_SESSION['role'];
+require_once '../config/db.php';
+$sys_settings = $pdo->query("SELECT referral_system_enabled FROM settings WHERE id=1")->fetch();
 ?>
 <nav class="sidebar d-flex flex-column">
 
@@ -27,10 +29,12 @@ $role = $_SESSION['role'];
                 <span class="sidebar-link-icon"><i class="fas fa-user-graduate"></i></span>
                 <span>Student Profile</span>
             </a>
+            <?php if ($sys_settings['referral_system_enabled'] ?? 1): ?>
             <a href="../admin/referrals.php" class="sidebar-link <?php echo $activePage == 'referrals' ? 'active' : ''; ?>">
                 <span class="sidebar-link-icon"><i class="fas fa-share-alt"></i></span>
                 <span>Referral &amp; Earn</span>
             </a>
+            <?php endif; ?>
 
             <div class="sidebar-section-label">Academic</div>
 

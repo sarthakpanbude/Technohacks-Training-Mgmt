@@ -6,227 +6,331 @@ require_once '../config/db.php';
 $pageTitle = "Reports & Analytics";
 $activePage = "reports";
 
-// Real data for charts
-$feeRows = $pdo->query("
-    SELECT DATE_FORMAT(payment_date, '%b') as month, SUM(amount) as total
-    FROM invoices
-    WHERE payment_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
-    GROUP BY MONTH(payment_date), DATE_FORMAT(payment_date, '%b')
-    ORDER BY MONTH(payment_date) ASC
-")->fetchAll();
+// Handle Filters
+$date_from = $_GET['date_from'] ?? date('Y-m-01', strtotime('-5 months'));
+$date_to   = $_GET['date_to']   ?? date('Y-m-d');
 
-$feeLabels = json_encode(array_column($feeRows, 'month'));
-$feeData   = json_encode(array_column($feeRows, 'total'));
+// KPI Calculations
+$sales_stmt = $pdo->prepare("SELECT SUM(sf.total_fee) FROM student_fees sf JOIN students s ON sf.student_id = s.enrollment_no WHERE DATE(s.created_at) BETWEEN ? AND ?");
+$sales_stmt->execute([$date_from, $date_to]);
+$totalSales = $sales_stmt->fetchColumn() ?: 0;
 
-$courseRows = $pdo->query("
-    SELECT s.course, COUNT(*) as total
-    FROM students s
-    WHERE s.course IS NOT NULL AND s.course != ''
-    GROUP BY s.course
-    ORDER BY total DESC
-    LIMIT 8
-")->fetchAll();
+$rev_stmt = $pdo->prepare("SELECT SUM(amount) FROM invoices WHERE DATE(payment_date) BETWEEN ? AND ?");
+$rev_stmt->execute([$date_from, $date_to]);
+$totalRevenue = $rev_stmt->fetchColumn() ?: 0;
 
-$courseLabels = json_encode(array_column($courseRows, 'course'));
-$courseData   = json_encode(array_column($courseRows, 'total'));
+$pend_stmt = $pdo->prepare("SELECT SUM(sf.pending_fee) FROM student_fees sf JOIN students s ON sf.student_id = s.enrollment_no WHERE DATE(s.created_at) BETWEEN ? AND ?");
+$pend_stmt->execute([$date_from, $date_to]);
+$totalPending = $pend_stmt->fetchColumn() ?: 0;
 
-// Summary stats
-$totalRevenue  = $pdo->query("SELECT SUM(amount) FROM invoices")->fetchColumn() ?: 0;
-$totalStudents = $pdo->query("SELECT COUNT(*) FROM students")->fetchColumn();
-$activeMonths  = $pdo->query("SELECT COUNT(DISTINCT DATE_FORMAT(payment_date,'%Y-%m')) FROM invoices")->fetchColumn() ?: 1;
-$avgMonthly    = $totalRevenue / $activeMonths;
+$exp_stmt = $pdo->prepare("SELECT SUM(bonus_amount) FROM referral_bonuses WHERE payout_status = 'Paid' AND DATE(paid_at) BETWEEN ? AND ?");
+$exp_stmt->execute([$date_from, $date_to]);
+$totalExpenses = $exp_stmt->fetchColumn() ?: 0;
+
+$totalProfit = $totalRevenue - $totalExpenses;
+
+// Monthly Trend Data
+$months = []; $revenueTrend = []; $salesTrend = []; $profitTrend = [];
+for ($i = 5; $i >= 0; $i--) {
+    $m = date('Y-m', strtotime("-$i months"));
+    $displayM = date('M Y', strtotime("-$i months"));
+    $months[] = $displayM;
+    $stmt = $pdo->prepare("SELECT SUM(amount) FROM invoices WHERE DATE_FORMAT(payment_date, '%Y-%m') = ?");
+    $stmt->execute([$m]);
+    $rev = (float)($stmt->fetchColumn() ?: 0);
+    $revenueTrend[] = $rev;
+    $stmt = $pdo->prepare("SELECT SUM(sf.total_fee) FROM student_fees sf JOIN students s ON sf.student_id = s.enrollment_no WHERE DATE_FORMAT(s.created_at, '%Y-%m') = ?");
+    $stmt->execute([$m]);
+    $salesTrend[] = (float)($stmt->fetchColumn() ?: 0);
+    $stmt = $pdo->prepare("SELECT SUM(bonus_amount) FROM referral_bonuses WHERE payout_status = 'Paid' AND DATE_FORMAT(paid_at, '%Y-%m') = ?");
+    $stmt->execute([$m]);
+    $exp = (float)($stmt->fetchColumn() ?: 0);
+    $profitTrend[] = $rev - $exp;
+}
+
+// Course Distribution
+$courseRows = $pdo->query("SELECT course, COUNT(*) as total FROM students WHERE course IS NOT NULL AND course != '' GROUP BY course ORDER BY total DESC LIMIT 5")->fetchAll();
 
 include '../includes/header.php';
 include '../includes/sidebar.php';
 ?>
 
-<main class="main-content">
+<main class="main-content pt-3">
     <?php include '../includes/topbar.php'; ?>
 
-    <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
-            <h4 class="fw-bold mb-1">Reports &amp; Analytics</h4>
-            <p class="mb-0" style="font-size:0.85rem;color:var(--text-muted);">Business performance at a glance</p>
+            <h4 class="fw-bold mb-0">Reports & Analytics</h4>
         </div>
         <div class="d-flex gap-2">
-            <a href="export_fees.php" class="btn rounded-pill px-4" style="font-size:0.85rem;border:1px solid var(--danger);color:var(--danger);background:rgba(239,68,68,0.06);">
-                <i class="fas fa-file-pdf me-2"></i>Export PDF
-            </a>
-            <a href="export_students.php" class="btn rounded-pill px-4" style="font-size:0.85rem;border:1px solid var(--success);color:var(--success);background:rgba(16,185,129,0.06);">
-                <i class="fas fa-file-excel me-2"></i>Export Excel
-            </a>
-        </div>
-    </div>
-
-    <!-- Summary KPI Row -->
-    <div class="row g-3 mb-4">
-        <div class="col-md-3">
-            <div class="stat-card h-100" style="border-top:3px solid var(--primary);">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="text-xs fw-bold text-uppercase" style="color:var(--text-light);letter-spacing:0.06em;">Total Revenue</span>
-                    <div style="width:30px;height:30px;border-radius:8px;background:rgba(99,102,241,0.12);display:flex;align-items:center;justify-content:center;">
-                        <i class="fas fa-rupee-sign" style="color:var(--primary);font-size:0.75rem;"></i>
-                    </div>
+            <button onclick="window.print()" class="btn btn-sm btn-light border rounded-pill px-3 shadow-sm">
+                <i class="fas fa-print me-1"></i>Print
+            </button>
+            <!-- Compact Filter Dropdown -->
+            <div class="dropdown">
+                <button class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm" data-bs-toggle="dropdown" data-bs-auto-close="outside">
+                    <i class="fas fa-filter me-1"></i>Filter Date
+                </button>
+                <div class="dropdown-menu dropdown-menu-end p-3 shadow-lg border-0 rounded-4" style="width: 300px;">
+                    <form method="GET">
+                        <div class="mb-2">
+                            <label class="form-label x-small fw-bold text-muted text-uppercase">Start Date</label>
+                            <input type="date" name="date_from" class="form-control form-control-sm rounded-3" value="<?php echo $date_from; ?>">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label x-small fw-bold text-muted text-uppercase">End Date</label>
+                            <input type="date" name="date_to" class="form-control form-control-sm rounded-3" value="<?php echo $date_to; ?>">
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm w-100 rounded-3 fw-bold">Apply Filter</button>
+                    </form>
                 </div>
-                <h4 class="fw-bold mb-0" style="color:var(--primary);">₹<?php echo number_format($totalRevenue, 0); ?></h4>
-                <p class="mb-0 text-xs" style="color:var(--text-muted);">All time collections</p>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card h-100" style="border-top:3px solid var(--success);">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="text-xs fw-bold text-uppercase" style="color:var(--text-light);letter-spacing:0.06em;">Avg / Month</span>
-                    <div style="width:30px;height:30px;border-radius:8px;background:rgba(16,185,129,0.12);display:flex;align-items:center;justify-content:center;">
-                        <i class="fas fa-chart-line" style="color:var(--success);font-size:0.75rem;"></i>
-                    </div>
-                </div>
-                <h4 class="fw-bold mb-0" style="color:var(--success);">₹<?php echo number_format($avgMonthly, 0); ?></h4>
-                <p class="mb-0 text-xs" style="color:var(--text-muted);">Monthly average</p>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card h-100" style="border-top:3px solid var(--info);">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="text-xs fw-bold text-uppercase" style="color:var(--text-light);letter-spacing:0.06em;">Total Students</span>
-                    <div style="width:30px;height:30px;border-radius:8px;background:rgba(14,165,233,0.12);display:flex;align-items:center;justify-content:center;">
-                        <i class="fas fa-users" style="color:var(--info);font-size:0.75rem;"></i>
-                    </div>
-                </div>
-                <h4 class="fw-bold mb-0" style="color:var(--info);"><?php echo $totalStudents; ?></h4>
-                <p class="mb-0 text-xs" style="color:var(--text-muted);">Enrolled students</p>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card h-100" style="border-top:3px solid var(--warning);">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="text-xs fw-bold text-uppercase" style="color:var(--text-light);letter-spacing:0.06em;">Active Months</span>
-                    <div style="width:30px;height:30px;border-radius:8px;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;">
-                        <i class="fas fa-calendar-alt" style="color:var(--warning);font-size:0.75rem;"></i>
-                    </div>
-                </div>
-                <h4 class="fw-bold mb-0" style="color:var(--warning);"><?php echo $activeMonths; ?></h4>
-                <p class="mb-0 text-xs" style="color:var(--text-muted);">Months with revenue</p>
             </div>
         </div>
     </div>
 
-    <!-- Charts Row -->
-    <div class="row g-4">
-        <!-- Fee Collection Bar Chart -->
-        <div class="col-md-7">
-            <div class="stat-card h-100">
-                <div class="d-flex justify-content-between align-items-center mb-4">
+    <!-- MAIN GRAPHS (Placed at Top) -->
+    <div class="row g-3 mb-3">
+        <div class="col-md-8">
+            <div class="stat-card bg-white p-3 rounded-4 shadow-sm border-0">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold mb-0 small">Sales vs Revenue Trend</h6>
+                    <div class="d-flex gap-2">
+                        <span class="x-small text-muted"><i class="fas fa-circle text-primary me-1"></i> Sales</span>
+                        <span class="x-small text-muted"><i class="fas fa-circle text-success me-1"></i> Revenue</span>
+                    </div>
+                </div>
+                <div style="height: 220px;">
+                    <canvas id="salesTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card bg-white p-3 rounded-4 shadow-sm border-0">
+                <h6 class="fw-bold mb-3 small">Monthly Profitability</h6>
+                <div style="height: 220px;">
+                    <canvas id="profitTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI Row (Compact) -->
+    <div class="row g-3 mb-3">
+        <div class="col-md-3">
+            <div class="kpi-card bg-white p-3 rounded-4 shadow-sm border-start border-primary border-4">
+                <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="fw-bold mb-0">Fee Collection</h6>
-                        <p class="mb-0 text-xs" style="color:var(--text-muted);">Last 6 months revenue</p>
+                        <span class="text-muted x-small fw-bold text-uppercase d-block">Sales</span>
+                        <h4 class="fw-bold mb-0">₹<?php echo number_format($totalSales, 0); ?></h4>
                     </div>
-                    <span style="font-size:0.75rem;color:var(--text-muted);background:#f1f5f9;padding:4px 12px;border-radius:20px;">
-                        <i class="fas fa-circle me-1" style="color:var(--primary);font-size:0.5rem;"></i>Revenue
-                    </span>
-                </div>
-                <div style="height:260px;position:relative;">
-                    <canvas id="feeReportChart"></canvas>
+                    <div class="bg-primary bg-opacity-10 p-2 rounded-3"><i class="fas fa-shopping-cart text-primary small"></i></div>
                 </div>
             </div>
         </div>
-        <!-- Course-wise Donut -->
-        <div class="col-md-5">
-            <div class="stat-card h-100">
-                <div class="mb-4">
-                    <h6 class="fw-bold mb-0">Course Distribution</h6>
-                    <p class="mb-0 text-xs" style="color:var(--text-muted);">Students per course</p>
+        <div class="col-md-3">
+            <div class="kpi-card bg-white p-3 rounded-4 shadow-sm border-start border-success border-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="text-muted x-small fw-bold text-uppercase d-block">Revenue</span>
+                        <h4 class="fw-bold mb-0">₹<?php echo number_format($totalRevenue, 0); ?></h4>
+                    </div>
+                    <div class="bg-success bg-opacity-10 p-2 rounded-3"><i class="fas fa-wallet text-success small"></i></div>
                 </div>
-                <div style="height:260px;position:relative;">
-                    <canvas id="courseReportChart"></canvas>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="kpi-card bg-white p-3 rounded-4 shadow-sm border-start border-info border-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="text-muted x-small fw-bold text-uppercase d-block">Profit</span>
+                        <h4 class="fw-bold mb-0">₹<?php echo number_format($totalProfit, 0); ?></h4>
+                    </div>
+                    <div class="bg-info bg-opacity-10 p-2 rounded-3"><i class="fas fa-chart-line text-info small"></i></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="kpi-card bg-white p-3 rounded-4 shadow-sm border-start border-danger border-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="text-muted x-small fw-bold text-uppercase d-block">Pending</span>
+                        <h4 class="fw-bold mb-0">₹<?php echo number_format($totalPending, 0); ?></h4>
+                    </div>
+                    <div class="bg-danger bg-opacity-10 p-2 rounded-3"><i class="fas fa-clock text-danger small"></i></div>
                 </div>
             </div>
         </div>
     </div>
 
+    <div class="row g-3">
+        <!-- Collection Status (Compact) -->
+        <div class="col-md-4">
+            <div class="stat-card bg-white p-3 rounded-4 shadow-sm border-0 h-100">
+                <h6 class="fw-bold mb-3 small text-center">Collection Status</h6>
+                <div style="height: 180px;">
+                    <canvas id="feeStatusChart"></canvas>
+                </div>
+                <div class="mt-3 pt-2 border-top d-flex justify-content-around text-center">
+                    <div>
+                        <span class="x-small text-muted d-block">Paid</span>
+                        <span class="small fw-bold text-success">₹<?php echo number_format($totalRevenue, 0); ?></span>
+                    </div>
+                    <div>
+                        <span class="x-small text-muted d-block">Pending</span>
+                        <span class="small fw-bold text-danger">₹<?php echo number_format($totalPending, 0); ?></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Courses (Compact) -->
+        <div class="col-md-8">
+            <div class="stat-card bg-white p-3 rounded-4 shadow-sm border-0 h-100">
+                <h6 class="fw-bold mb-3 small">Top Domain Performance</h6>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
+                        <thead class="bg-light text-uppercase x-small fw-bold text-muted">
+                            <tr>
+                                <th class="border-0 px-2">Domain</th>
+                                <th class="border-0">Value</th>
+                                <th class="border-0 text-end px-2">Share</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($courseRows as $course): 
+                                $billed = $pdo->prepare("SELECT SUM(sf.total_fee) FROM student_fees sf JOIN students s ON sf.student_id = s.enrollment_no WHERE s.course = ?");
+                                $billed->execute([$course['course']]);
+                                $courseValue = $billed->fetchColumn() ?: 0;
+                                $share = ($totalSales > 0) ? ($courseValue / $totalSales) * 100 : 0;
+                            ?>
+                            <tr>
+                                <td class="px-2 fw-bold text-primary"><?php echo htmlspecialchars($course['course']); ?></td>
+                                <td class="fw-bold">₹<?php echo number_format($courseValue, 0); ?></td>
+                                <td class="text-end px-2">
+                                    <div class="d-flex align-items-center justify-content-end gap-2">
+                                        <span class="x-small text-muted"><?php echo round($share, 0); ?>%</span>
+                                        <div class="progress" style="width: 40px; height: 4px;">
+                                            <div class="progress-bar bg-primary" style="width: <?php echo $share; ?>%"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
 </main>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    if (typeof Chart === 'undefined') return;
+    Chart.defaults.font.family = "'Outfit', sans-serif";
+    Chart.defaults.color = '#94a3b8';
 
-    const feeCtx = document.getElementById('feeReportChart');
-    if (feeCtx) {
-        const feeGrad = feeCtx.getContext('2d').createLinearGradient(0, 0, 0, 260);
-        feeGrad.addColorStop(0, 'rgba(99,102,241,0.85)');
-        feeGrad.addColorStop(1, 'rgba(79,70,229,0.5)');
-
-        new Chart(feeCtx, {
-            type: 'bar',
+    const salesCtx = document.getElementById('salesTrendChart');
+    if (salesCtx) {
+        new Chart(salesCtx.getContext('2d'), {
+            type: 'line',
             data: {
-                labels: <?php echo $feeLabels ?: '["No data"]'; ?>,
-                datasets: [{
-                    label: 'Revenue (₹)',
-                    data: <?php echo $feeData ?: '[0]'; ?>,
-                    backgroundColor: feeGrad,
-                    borderRadius: 8,
-                    borderSkipped: false,
-                }]
+                labels: <?php echo json_encode($months); ?>,
+                datasets: [
+                    {
+                        label: 'Sales',
+                        data: <?php echo json_encode($salesTrend); ?>,
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99, 102, 241, 0.05)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 3
+                    },
+                    {
+                        label: 'Revenue',
+                        data: <?php echo json_encode($revenueTrend); ?>,
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.05)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 3
+                    }
+                ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        backgroundColor: '#0f172a',
-                        padding: 10,
-                        cornerRadius: 10,
-                        callbacks: { label: ctx => ' ₹' + ctx.parsed.y.toLocaleString('en-IN') }
-                    }
-                },
+                plugins: { legend: { display: false }, tooltip: { backgroundColor: '#0f172a' } },
                 scales: {
-                    y: {
-                        beginAtZero: true,
-                        grid: { color: '#f1f5f9', drawBorder: false },
-                        ticks: { font: { family: 'Outfit', size: 11 }, color: '#94a3b8', callback: v => '₹' + (v/1000) + 'k' }
-                    },
-                    x: {
-                        grid: { display: false, drawBorder: false },
-                        ticks: { font: { family: 'Outfit', size: 11 }, color: '#94a3b8' }
-                    }
+                    y: { beginAtZero: true, grid: { color: '#f8fafc' }, ticks: { font: { size: 10 }, callback: v => '₹' + (v >= 1000 ? (v/1000) + 'k' : v) } },
+                    x: { grid: { display: false }, ticks: { font: { size: 10 } } }
                 }
             }
         });
     }
 
-    const courseCtx = document.getElementById('courseReportChart');
-    if (courseCtx) {
-        new Chart(courseCtx, {
-            type: 'doughnut',
+    const profitCtx = document.getElementById('profitTrendChart');
+    if (profitCtx) {
+        new Chart(profitCtx.getContext('2d'), {
+            type: 'bar',
             data: {
-                labels: <?php echo $courseLabels ?: '["No data"]'; ?>,
+                labels: <?php echo json_encode($months); ?>,
                 datasets: [{
-                    data: <?php echo $courseData ?: '[1]'; ?>,
-                    backgroundColor: ['#6366f1','#10b981','#f59e0b','#ef4444','#0ea5e9','#8b5cf6','#ec4899','#14b8a6'],
-                    borderWidth: 3,
-                    borderColor: 'white',
-                    hoverOffset: 6,
+                    label: 'Profit',
+                    data: <?php echo json_encode($profitTrend); ?>,
+                    backgroundColor: '#0ea5e9',
+                    borderRadius: 4
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                cutout: '65%',
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: { font: { family: 'Outfit', size: 11 }, padding: 16, usePointStyle: true, pointStyleWidth: 8 }
-                    },
-                    tooltip: {
-                        backgroundColor: '#0f172a',
-                        padding: 10,
-                        cornerRadius: 10,
-                    }
+                plugins: { legend: { display: false }, tooltip: { backgroundColor: '#0f172a' } },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: '#f8fafc' }, ticks: { font: { size: 10 } } },
+                    x: { grid: { display: false }, ticks: { font: { size: 10 } } }
                 }
+            }
+        });
+    }
+
+    const statusCtx = document.getElementById('feeStatusChart');
+    if (statusCtx) {
+        new Chart(statusCtx.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Paid', 'Pending'],
+                datasets: [{
+                    data: [<?php echo $totalRevenue; ?>, <?php echo $totalPending; ?>],
+                    backgroundColor: ['#10b981', '#ef4444'],
+                    borderWidth: 2,
+                    borderColor: '#ffffff',
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '80%',
+                plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, font: { size: 10 } } } }
             }
         });
     }
 });
 </script>
+
+<style>
+.main-content { padding-top: 1rem !important; }
+.kpi-card { transition: all 0.2s; border: 1px solid #f1f5f9 !important; }
+.kpi-card h4 { font-size: 1.25rem; }
+.x-small { font-size: 0.65rem; }
+.stat-card { border: 1px solid #f1f5f9 !important; }
+@media print {
+    .sidebar, .topbar, .btn, .dropdown { display: none !important; }
+    .main-content { margin: 0 !important; padding: 0 !important; width: 100% !important; }
+}
+</style>
 
 <?php include '../includes/footer.php'; ?>

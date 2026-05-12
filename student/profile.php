@@ -11,6 +11,10 @@ $user = $pdo->prepare("SELECT u.*, s.enrollment_no, s.dob, s.phone, s.address, s
 $user->execute([$userId]);
 $userData = $user->fetch();
 
+// Fetch Referral System Status
+$sys_settings = $pdo->query("SELECT referral_system_enabled FROM settings WHERE id=1")->fetch();
+$referral_enabled = $sys_settings['referral_system_enabled'] ?? 1;
+
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_profile'])) {
     $phone = $_POST['phone'];
     $dob = $_POST['dob'];
@@ -54,12 +58,13 @@ include '../includes/sidebar.php';
                 <hr>
 
                 <!-- Referral & Earn Section -->
+                <?php if ($referral_enabled): ?>
                 <div class="referral-section text-start p-3 bg-light rounded-4">
                     <h6 class="fw-bold mb-2 small"><i class="fas fa-gift text-primary me-2"></i>Referral & Earn</h6>
                     <div class="mb-3">
                         <label class="x-small text-muted fw-bold text-uppercase mb-1" style="font-size: 0.6rem;">Your Referral Code</label>
                         <div class="input-group input-group-sm">
-                            <input type="text" id="refCode" class="form-control fw-bold text-center bg-white" value="<?php echo $userData['referral_code'] ?? 'N/A'; ?>" readonly>
+                            <input type="text" id="refCode" class="form-control fw-bold text-center bg-white" value="<?php echo $userData['enrollment_no'] ?? 'N/A'; ?>" readonly>
                             <button class="btn btn-primary" onclick="copyRefCode()"><i class="fas fa-copy"></i></button>
                         </div>
                     </div>
@@ -94,6 +99,7 @@ include '../includes/sidebar.php';
                         alert("Code copied: " + copyText.value);
                     }
                 </script>
+                <?php endif; ?>
             </div>
         </div>
         

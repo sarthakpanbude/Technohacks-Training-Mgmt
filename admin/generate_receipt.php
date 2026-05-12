@@ -110,6 +110,8 @@ if ($installment_data) {
     $due_date = $s['next_installment_date'] ? date('d/m/Y', strtotime($s['next_installment_date'])) : date('d/m/Y', strtotime('+30 days'));
 }
 
+// Fetch Institute Settings
+$settings = $pdo->query("SELECT * FROM settings WHERE id=1")->fetch();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -377,19 +379,19 @@ if ($installment_data) {
             <div class="bill-of-supply">
                 <span><?php echo $installment_data ? 'INSTALLMENT RECEIPT' : 'BILL OF SUPPLY'; ?></span>
             </div>
-            <div class="slogan">Let's Grow Together...!!</div>
+            <div class="slogan"><?php echo htmlspecialchars($settings['slogan'] ?? "Let's Grow Together...!!"); ?></div>
         </div>
 
         <div class="company-section">
             <div class="company-logo">
-                <img src="../assets/img/logo.png" alt="TechnoHacks">
+                <img src="../<?php echo $settings['institute_logo'] ?: 'assets/img/logo.png'; ?>" alt="<?php echo htmlspecialchars($settings['institute_name']); ?>">
             </div>
             <div class="company-details">
-                <h1>TechnoHacks Solutions</h1>
+                <h1><?php echo htmlspecialchars($settings['institute_name']); ?></h1>
                 <div class="company-info">
-                    <p>10, 2nd Floor, Devikrupa Apartment, Vidya Vikas Circle, Gangapur Rd, Nashik, Maharashtra 422005</p>
-                    <p><strong>Mobile:</strong> 082089 37014</p>
-                    <p><strong>Email:</strong> info@technohacks.co.in</p>
+                    <p><?php echo nl2br(htmlspecialchars($settings['institute_address'])); ?></p>
+                    <p><strong>Mobile:</strong> <?php echo htmlspecialchars($settings['institute_phone']); ?></p>
+                    <p><strong>Email:</strong> <?php echo htmlspecialchars($settings['institute_email']); ?></p>
                 </div>
             </div>
         </div>
@@ -441,45 +443,45 @@ if ($installment_data) {
         <div class="subtotal-bar">
             <span>SUBTOTAL</span>
             <div class="d-flex gap-5">
-                <span>₹ <?php echo number_format($calc_std_fee, 2); ?></span>
+                <span><?php echo $settings['currency'] ?? '₹'; ?> <?php echo number_format($calc_std_fee, 2); ?></span>
             </div>
         </div>
 
         <div class="totals-section">
             <div class="total-row">
                 <div class="total-label">STANDARD COURSE FEE</div>
-                <div class="total-value">₹ <?php echo number_format($calc_std_fee, 2); ?></div>
+                <div class="total-value"><?php echo $settings['currency'] ?? '₹'; ?> <?php echo number_format($calc_std_fee, 2); ?></div>
             </div>
             <div class="total-row text-primary">
                 <div class="total-label">SPECIAL DISCOUNT</div>
-                <div class="total-value">- ₹ <?php echo number_format($s['other_discount'] ?? 0, 2); ?></div>
+                <div class="total-value">- <?php echo $settings['currency'] ?? '₹'; ?> <?php echo number_format($s['other_discount'] ?? 0, 2); ?></div>
             </div>
             <div class="total-row text-success">
                 <div class="total-label">REFERRAL DISCOUNT</div>
-                <div class="total-value">- ₹ <?php echo number_format($discount_info['discount_amount'] ?? 0, 2); ?></div>
+                <div class="total-value">- <?php echo $settings['currency'] ?? '₹'; ?> <?php echo number_format($discount_info['discount_amount'] ?? 0, 2); ?></div>
             </div>
             <div class="total-row grand-total">
                 <div class="total-label">TOTAL PAYABLE FEE</div>
-                <div class="total-value">₹ <?php echo number_format($total_fees, 2); ?></div>
+                <div class="total-value"><?php echo $settings['currency'] ?? '₹'; ?> <?php echo number_format($total_fees, 2); ?></div>
             </div>
             <?php if ($installment_data): ?>
             <div class="total-row">
                 <div class="total-label">Previously Paid</div>
-                <div class="total-value">₹ <?php echo number_format($previous_paid, 2); ?></div>
+                <div class="total-value"><?php echo $settings['currency'] ?? '₹'; ?> <?php echo number_format($previous_paid, 2); ?></div>
             </div>
             <div class="total-row text-success">
                 <div class="total-label">Current Payment</div>
-                <div class="total-value">₹ <?php echo number_format($paid_amount, 2); ?></div>
+                <div class="total-value"><?php echo $settings['currency'] ?? '₹'; ?> <?php echo number_format($paid_amount, 2); ?></div>
             </div>
             <?php else: ?>
             <div class="total-row text-success">
                 <div class="total-label">Received Amount</div>
-                <div class="total-value">₹ <?php echo number_format($paid_amount, 2); ?></div>
+                <div class="total-value"><?php echo $settings['currency'] ?? '₹'; ?> <?php echo number_format($paid_amount, 2); ?></div>
             </div>
             <?php endif; ?>
             <div class="total-row text-danger fw-bold border-top pt-1 mt-1">
                 <div class="total-label">Pending Balance</div>
-                <div class="total-value">₹ <?php echo number_format($balance, 2); ?></div>
+                <div class="total-value"><?php echo $settings['currency'] ?? '₹'; ?> <?php echo number_format($balance, 2); ?></div>
             </div>
 
             <div class="amount-in-words">
@@ -521,7 +523,7 @@ if ($installment_data) {
                 <img src="https://upload.wikimedia.org/wikipedia/commons/3/3a/Jon_Kirsch%27s_Signature.png" class="signature-img" style="opacity: 0.7; filter: grayscale(1);">
             </div>
             <div class="signature-label">AUTHORISED SIGNATORY FOR</div>
-            <div class="signature-company">TechnoHacks Solutions</div>
+            <div class="signature-company"><?php echo htmlspecialchars($settings['institute_name']); ?></div>
         </div>
         
     </div>

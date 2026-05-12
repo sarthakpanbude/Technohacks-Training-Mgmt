@@ -16,12 +16,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $domain = $_POST['other_domain'];
     }
     $type = $_POST['type'];
-    $mode = $_POST['mode'];
     $duration = $_POST['internship_duration'] ?? '';
 
     try {
         $stmt = $pdo->prepare("INSERT INTO inquiries (name, mobile, email, course, message, status) VALUES (?, ?, ?, ?, ?, 'Successfully Submitted')");
-        $msg_body = "Inquiry for $type ($mode)";
+        $msg_body = "Inquiry for $type";
         if ($type == 'Internship' && !empty($duration)) {
             $msg_body .= " - Duration: $duration";
         }
@@ -140,14 +139,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     </select>
                 </div>
 
-                <div class="col-md-6">
-                    <label class="form-label small fw-bold">Preferred Mode</label>
-                    <select name="mode" class="form-select" required>
-                        <option value="Online">Online (Virtual)</option>
-                        <option value="Offline">Offline (At Center)</option>
-                        <option value="Hybrid">Hybrid (Online + Offline)</option>
-                    </select>
-                </div>
+
 
                 <div class="col-12" id="otherDomainContainer" style="display: none;">
                     <label class="form-label small fw-bold text-primary"><i class="fas fa-edit me-1"></i> Specify Your Domain</label>

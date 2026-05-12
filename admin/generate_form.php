@@ -38,6 +38,9 @@ $installments_list = $inst_stmt->fetchAll();
 $stmt = $pdo->prepare("SELECT discount_amount FROM referral_bonuses WHERE referred_id = ?");
 $stmt->execute([$student_id]);
 $referral_discount = $stmt->fetchColumn() ?: 0;
+
+// Fetch Institute Settings
+$settings = $pdo->query("SELECT * FROM settings WHERE id=1")->fetch();
 ?>
 <!DOCTYPE html>
 <html>
@@ -81,25 +84,22 @@ $referral_discount = $stmt->fetchColumn() ?: 0;
 
         /* Create equal sized containers on sides to force true center */
         .header-side {
-            width: 120px;
+            width: 150px;
             display: flex;
-            align-items: center;
+            flex-direction: column;
+            align-items: flex-start; /* Logo on left */
         }
         
         .header-side.right {
-            justify-content: flex-end;
+            align-items: flex-end; /* Photo on right */
         }
 
         .logo-box {
-            width: 60px;
-            height: 60px;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
+            width: 100px;
+            height: 100px;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 5px;
-            background: #fff;
         }
 
         .logo-box img {
@@ -132,11 +132,6 @@ $referral_discount = $stmt->fetchColumn() ?: 0;
             margin: 0;
             letter-spacing: 0.5px;
             text-align: center;
-        }
-
-        .header-side {
-            display: flex;
-            flex-direction: column;
         }
 
         .photo-frame {
@@ -389,13 +384,13 @@ $referral_discount = $stmt->fetchColumn() ?: 0;
                 <div class="header-top-row">
                     <div class="header-side left">
                         <div class="logo-box">
-                            <img src="../assets/img/logo.png" alt="TechnoHacks">
+                            <img src="../<?php echo $settings['institute_logo'] ?: 'assets/img/logo.png'; ?>" alt="<?php echo htmlspecialchars($settings['institute_name']); ?>">
                         </div>
                     </div>
 
                     <div class="company-info-box">
                         <h2 class="form-title">Admission Form</h2>
-                        <h1 class="company-name">TechnoHacks Solutions Pvt. Ltd</h1>
+                        <h1 class="company-name"><?php echo htmlspecialchars($settings['institute_name']); ?></h1>
                     </div>
 
                     <div class="header-side right">
@@ -473,8 +468,7 @@ $referral_discount = $stmt->fetchColumn() ?: 0;
                 <td><?php echo htmlspecialchars($s['duration'] ?? 'N/A'); ?></td>
             </tr>
             <tr>
-                <th>Mode (Online/Offline)</th>
-                <td><?php echo htmlspecialchars($s['mode'] ?? 'Offline'); ?></td>
+
                 <th>Start Date</th>
                 <td><?php echo $s['start_date'] ? date('d/m/Y', strtotime($s['start_date'])) : 'N/A'; ?></td>
             </tr>
@@ -487,7 +481,7 @@ $referral_discount = $stmt->fetchColumn() ?: 0;
             ?>
             <tr>
                 <th>Standard Fee</th>
-                <td>₹<?php echo number_format($calc_std_fee, 2); ?></td>
+                <td><?php echo $settings['currency'] ?? '₹'; ?><?php echo number_format($calc_std_fee, 2); ?></td>
                 <th>Payment Mode</th>
                 <td><?php echo htmlspecialchars($s['payment_mode'] ?? 'N/A'); ?></td>
             </tr>
@@ -495,14 +489,14 @@ $referral_discount = $stmt->fetchColumn() ?: 0;
                 <th>Discounts Applied</th>
                 <td colspan="3">
                     <div style="display: flex; gap: 15px; font-size: 11px;">
-                        <span>• Special Discount: <strong>-₹<?php echo number_format($s['other_discount'] ?? 0, 2); ?></strong></span>
-                        <span>• Referral Discount: <strong>-₹<?php echo number_format($referral_discount, 2); ?></strong></span>
+                        <span>• Special Discount: <strong>-<?php echo $settings['currency'] ?? '₹'; ?><?php echo number_format($s['other_discount'] ?? 0, 2); ?></strong></span>
+                        <span>• Referral Discount: <strong>-<?php echo $settings['currency'] ?? '₹'; ?><?php echo number_format($referral_discount, 2); ?></strong></span>
                     </div>
                 </td>
             </tr>
             <tr>
                 <th>Final Payable Fee</th>
-                <td colspan="3"><strong style="font-size: 16px; color: #800080;">₹<?php echo number_format($s['total_fee'] ?? 0, 2); ?></strong></td>
+                <td colspan="3"><strong style="font-size: 16px; color: #800080;"><?php echo $settings['currency'] ?? '₹'; ?><?php echo number_format($s['total_fee'] ?? 0, 2); ?></strong></td>
             </tr>
         </table>
 
@@ -522,18 +516,31 @@ $referral_discount = $stmt->fetchColumn() ?: 0;
             ?>
             <div class="terms-conditions-box">
                 <h6>Terms & Conditions</h6>
-                <ol style="padding-left: 15px; margin-bottom: 0; line-height: 1.5;">
-                    <li><strong>Refund Policy:</strong> A 100% refund is available if cancelled within the active refund period ending on <strong><?php echo date('d M Y', strtotime($refund_date)); ?></strong>, after which no refund will be provided.</li>
-                    <li>100% refund will be given if the syllabus is not completed due to the institute’s fault.</li>
-                    <li><strong>Lifetime access:</strong> Students can join any existing batch again after course
-                        completion, free of cost (same course only).</li>
-                    <li>Fees must be paid as per plan. Delay may suspend access.</li>
-                    <li>Certificate will be issued only after course completion and full fee payment.</li>
-                    <li>Students must maintain regular attendance; missed sessions may not be repeated.</li>
-                    <li>Batch timings, trainer, or schedule may change if required.</li>
-                    <li>The institute is not responsible for any medical issues, injury, or health-related loss during the
-                        course.</li>
-                    <li>Misconduct or rule violation may lead to termination without refund.</li>
+                <ol style="padding-left: 15px; margin-bottom: 0; line-height: 1.5; font-size: 9px;">
+                    <?php 
+                    $terms_str = $settings['terms_conditions'] ?? "";
+                    if (empty(trim($terms_str))) {
+                        $terms = [
+                            "Fees once paid are non-refundable and non-transferable under any circumstances.",
+                            "Minimum 75% attendance is mandatory to be eligible for course certification.",
+                            "The institute reserves the right to modify batch timings or curriculum if necessary.",
+                            "Students are required to carry their ID cards at all times within institute premises.",
+                            "Any damage to institute property by the student will be charged to the student.",
+                            "Placement assistance is subject to student performance, attendance, and conduct.",
+                            "All disputes are subject to the jurisdiction of local courts only."
+                        ];
+                    } else {
+                        $terms = explode("\n", $terms_str);
+                    }
+                    
+                    foreach($terms as $term):
+                        if(trim($term)):
+                    ?>
+                        <li><?php echo trim($term); ?></li>
+                    <?php 
+                        endif;
+                    endforeach; 
+                    ?>
                 </ol>
             </div>
 
@@ -551,7 +558,7 @@ $referral_discount = $stmt->fetchColumn() ?: 0;
                 <div class="sig-block text-end">
                     <div class="sig-line"></div>
                     <div class="signature-label">AUTHORISED SIGNATORY FOR</div>
-                    <div class="signature-company">TechnoHacks Solutions</div>
+                    <div class="signature-company"><?php echo htmlspecialchars($settings['institute_name']); ?></div>
                 </div>
             </div>
 

@@ -6,6 +6,10 @@ require_once '../config/db.php';
 $pageTitle = "Admin Dashboard";
 $activePage = "dashboard";
 
+// Fetch Settings
+$sys_settings = $pdo->query("SELECT referral_system_enabled FROM settings WHERE id=1")->fetch();
+$referral_enabled = $sys_settings['referral_system_enabled'] ?? 1;
+
 // Fetch Stats
 $totalStudents = $pdo->query("SELECT COUNT(*) FROM students")->fetchColumn();
 $totalReferrals = $pdo->query("SELECT COUNT(*) FROM students WHERE referral_id IS NOT NULL")->fetchColumn() ?: 0;
@@ -17,25 +21,25 @@ $totalPendingAmt = $pdo->query("SELECT SUM(amount) FROM installments WHERE statu
 $overdueCount = $pdo->query("SELECT COUNT(*) FROM installments WHERE status = 'Pending' AND due_date < CURDATE()")->fetchColumn() ?: 0;
 $recentTransactions = $pdo->query("SELECT COUNT(*) FROM invoices WHERE DATE(payment_date) = CURDATE()")->fetchColumn() ?: 0;
 
-// Fetch Monthly Enrollments for Chart
+// Fetch Monthly Enrollments for Chart (using students table as it tracks admissions)
 $monthlyEnrollments = array_fill(0, 12, 0);
-$enrollmentQuery = $pdo->query("SELECT MONTH(enrollment_date) as m, COUNT(*) as c FROM enrollments WHERE YEAR(enrollment_date) = YEAR(CURDATE()) GROUP BY MONTH(enrollment_date)");
+$enrollmentQuery = $pdo->query("SELECT MONTH(created_at) as m, COUNT(*) as c FROM students WHERE YEAR(created_at) = YEAR(CURDATE()) GROUP BY MONTH(created_at)");
 while($row = $enrollmentQuery->fetch()) {
     $monthlyEnrollments[$row['m'] - 1] = $row['c'];
 }
 $chartData = json_encode(array_values($monthlyEnrollments));
 
-// Handle Student ID Search
-$searchStudent = null;
+// Handle Student ID or Name Search
+$searchResults = [];
 if (isset($_GET['search_id']) && !empty($_GET['search_id'])) {
-    $search_id = $_GET['search_id'];
+    $search_term = trim($_GET['search_id']);
     $stmt = $pdo->prepare("SELECT s.*, u.full_name, u.email, sf.total_fee, sf.pending_fee 
                           FROM students s 
                           JOIN users u ON s.user_id = u.id 
                           JOIN student_fees sf ON s.enrollment_no = sf.student_id 
-                          WHERE s.enrollment_no = ?");
-    $stmt->execute([$search_id]);
-    $searchStudent = $stmt->fetch();
+                          WHERE s.enrollment_no = ? OR u.full_name LIKE ?");
+    $stmt->execute([$search_term, "%$search_term%"]);
+    $searchResults = $stmt->fetchAll();
 }
 
 include '../includes/header.php';
@@ -64,7 +68,7 @@ include '../includes/sidebar.php';
             <div class="d-flex align-items-center gap-2 px-3 py-2 bg-white border rounded-pill shadow-sm flex-grow-1" style="border-color:var(--border)!important;">
                 <i class="fas fa-search" style="color:var(--text-muted);font-size:0.8rem;"></i>
                 <input type="text" name="search_id" class="border-0 outline-0 w-100 bg-transparent"
-                       placeholder="Quick Student Search (ID)..."
+                       placeholder="Search Student by ID or Name..."
                        style="font-size:0.875rem;outline:none;"
                        value="<?php echo htmlspecialchars($_GET['search_id'] ?? ''); ?>">
             </div>
@@ -85,45 +89,48 @@ include '../includes/sidebar.php';
 
     <!-- Search Result -->
     <?php if (isset($_GET['search_id']) && !empty($_GET['search_id'])): ?>
-        <?php if ($searchStudent): ?>
-            <div class="stat-card mb-4" style="border-left:4px solid var(--primary);">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <div class="d-flex align-items-center gap-2">
-                        <div style="width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,rgba(99,102,241,0.15),rgba(79,70,229,0.08));display:flex;align-items:center;justify-content:center;">
-                            <i class="fas fa-id-card" style="color:var(--primary);font-size:0.85rem;"></i>
+        <?php if (count($searchResults) > 0): ?>
+            <?php foreach ($searchResults as $searchStudent): ?>
+                <div class="stat-card mb-3" style="border-left:4px solid var(--primary);">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <div style="width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,rgba(99,102,241,0.15),rgba(79,70,229,0.08));display:flex;align-items:center;justify-content:center;">
+                                <i class="fas fa-id-card" style="color:var(--primary);font-size:0.85rem;"></i>
+                            </div>
+                            <span class="fw-bold" style="color:var(--primary);font-size:0.9rem;">Student Found: <?php echo htmlspecialchars($searchStudent['enrollment_no']); ?></span>
                         </div>
-                        <span class="fw-bold" style="color:var(--primary);font-size:0.9rem;">Student Found: <?php echo htmlspecialchars($searchStudent['enrollment_no']); ?></span>
+                        <a href="dashboard.php" class="btn-close" style="font-size:0.8rem;"></a>
                     </div>
-                    <a href="dashboard.php" class="btn-close" style="font-size:0.8rem;"></a>
-                </div>
-                <div class="row g-3 align-items-center">
-                    <div class="col-md-3">
-                        <div class="text-xs fw-bold text-uppercase mb-1" style="color:var(--text-light);">Full Name</div>
-                        <div class="fw-bold"><?php echo htmlspecialchars($searchStudent['full_name']); ?></div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="text-xs fw-bold text-uppercase mb-1" style="color:var(--text-light);">Course</div>
-                        <div class="fw-bold"><?php echo htmlspecialchars($searchStudent['course']); ?></div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="text-xs fw-bold text-uppercase mb-1" style="color:var(--text-light);">Fees (Total / Pending)</div>
-                        <div>
-                            <span class="fw-bold">₹<?php echo number_format($searchStudent['total_fee'], 2); ?></span>
-                            <span class="text-muted mx-1">/</span>
-                            <span class="fw-bold" style="color:var(--danger);">₹<?php echo number_format($searchStudent['pending_fee'], 2); ?></span>
+                    <div class="row g-3 align-items-center">
+                        <div class="col-md-3">
+                            <div class="text-xs fw-bold text-uppercase mb-1" style="color:var(--text-light);">Full Name</div>
+                            <div class="fw-bold"><?php echo htmlspecialchars($searchStudent['full_name']); ?></div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-xs fw-bold text-uppercase mb-1" style="color:var(--text-light);">Course</div>
+                            <div class="fw-bold"><?php echo htmlspecialchars($searchStudent['course']); ?></div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-xs fw-bold text-uppercase mb-1" style="color:var(--text-light);">Fees (Total / Pending)</div>
+                            <div>
+                                <span class="fw-bold">₹<?php echo number_format($searchStudent['total_fee'], 2); ?></span>
+                                <span class="text-muted mx-1">/</span>
+                                <span class="fw-bold" style="color:var(--danger);">₹<?php echo number_format($searchStudent['pending_fee'], 2); ?></span>
+                            </div>
+                        </div>
+                        <div class="col-md-3 text-end d-flex gap-2 justify-content-end">
+                            <a href="view_student.php?id=<?php echo $searchStudent['id']; ?>" class="btn btn-primary btn-sm rounded-pill px-4 shadow-sm">
+                                <i class="fas fa-user me-1"></i> View Profile
+                            </a>
                         </div>
                     </div>
-                    <div class="col-md-3 text-end d-flex gap-2 justify-content-end">
-                        <a href="generate_form.php?id=<?php echo $searchStudent['enrollment_no']; ?>" class="btn btn-primary btn-sm rounded-pill px-3">Form</a>
-                        <a href="generate_receipt.php?id=<?php echo $searchStudent['id']; ?>" class="btn btn-sm rounded-pill px-3" style="border:1px solid var(--success);color:var(--success);">Receipt</a>
-                    </div>
                 </div>
-            </div>
+            <?php endforeach; ?>
         <?php else: ?>
             <div class="d-flex align-items-center justify-content-between mb-4 p-3 rounded-3" style="background:#fffbeb;border:1px solid #fde68a;">
                 <div class="d-flex align-items-center gap-2">
                     <i class="fas fa-exclamation-circle" style="color:#f59e0b;"></i>
-                    <span style="font-size:0.875rem;">ID <strong><?php echo htmlspecialchars($_GET['search_id']); ?></strong> not found.</span>
+                    <span style="font-size:0.875rem;">No student found matching "<strong><?php echo htmlspecialchars($_GET['search_id']); ?></strong>".</span>
                 </div>
                 <a href="dashboard.php" class="btn-close" style="font-size:0.75rem;"></a>
             </div>
@@ -149,6 +156,7 @@ include '../includes/sidebar.php';
                 </div>
             </div>
         </div>
+        <?php if ($referral_enabled): ?>
         <div class="col-md-4">
             <div class="stat-card h-100">
                 <div class="d-flex justify-content-between align-items-start">
@@ -166,6 +174,7 @@ include '../includes/sidebar.php';
                 </div>
             </div>
         </div>
+        <?php endif; ?>
         <div class="col-md-4">
             <div class="stat-card h-100">
                 <div class="d-flex justify-content-between align-items-start">

@@ -33,7 +33,7 @@ include '../includes/header.php';
 include '../includes/sidebar.php';
 ?>
 
-<main class="main-content w-100 p-4">
+<main class="main-content p-4">
     <?php include '../includes/topbar.php'; ?>
 
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -65,7 +65,7 @@ include '../includes/sidebar.php';
                 <thead class="bg-light">
                     <tr>
                         <th class="px-4 border-0">Student</th>
-                        <th class="border-0">Type/Mode</th>
+                        <th class="border-0">Application Type</th>
                         <th class="border-0">Domain</th>
                         <th class="border-0">Contact</th>
                         <th class="border-0">Status</th>
@@ -95,7 +95,6 @@ include '../includes/sidebar.php';
                                 </td>
                                 <td>
                                     <span class="badge bg-primary bg-opacity-10 text-primary border-0"><?php echo $v['type']; ?></span>
-                                    <span class="badge bg-info bg-opacity-10 text-info border-0"><?php echo $v['mode']; ?></span>
                                 </td>
                                 <td>
                                     <div class="fw-medium text-primary small"><?php echo $v['course_interest']; ?></div>

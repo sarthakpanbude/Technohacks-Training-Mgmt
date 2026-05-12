@@ -3,6 +3,10 @@ require_once '../includes/auth.php';
 checkAuth('admin');
 require_once '../config/db.php';
 
+// Fetch Referral System Status
+$sys_settings = $pdo->query("SELECT referral_system_enabled FROM settings WHERE id=1")->fetch();
+$referral_enabled = $sys_settings['referral_system_enabled'] ?? 1;
+
 $pageTitle = "Admission Form";
 $activePage = "visitors";
 
@@ -211,7 +215,7 @@ include '../includes/header.php';
 include '../includes/sidebar.php';
 ?>
 
-<main class="main-content w-100 p-4">
+<main class="main-content p-4">
     <?php include '../includes/topbar.php'; ?>
 
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -403,10 +407,12 @@ include '../includes/sidebar.php';
                                         <span class="text-muted small">Special Discount:</span>
                                         <span class="fw-bold text-danger" id="discountDisplay">-₹0.00</span>
                                     </div>
+                                    <?php if ($referral_enabled): ?>
                                     <div class="d-flex justify-content-between align-items-center mb-2" id="referralDiscountRow">
                                         <span class="text-muted small">Referral Discount (5%):</span>
                                         <span class="fw-bold text-success" id="referralDiscountDisplay">-₹0.00</span>
                                     </div>
+                                    <?php endif; ?>
                                     <div class="d-flex justify-content-between align-items-center">
                                         <span class="fw-bold h5 mb-0">Total Payable Fee:</span>
                                         <input type="hidden" name="total_fee" id="finalTotalFee">
@@ -454,6 +460,7 @@ include '../includes/sidebar.php';
                                     </div>
                                 </div>
 
+                                <?php if ($referral_enabled): ?>
                                 <div class="mt-4 pt-3 border-top">
                                     <label class="form-label small fw-bold">Referral ID (Optional)</label>
                                     <div class="input-group">
@@ -464,6 +471,46 @@ include '../includes/sidebar.php';
                                     <input type="hidden" name="referral_discount_applied" id="referralDiscountApplied" value="0">
                                     <small id="referralStatus" class="text-muted" style="font-size: 0.7rem;">Enter a valid code to get 5% discount.</small>
                                 </div>
+                                <?php else: ?>
+                                    <input type="hidden" name="referral_id" id="referralId" value="">
+                                    <input type="hidden" name="referral_discount_applied" id="referralDiscountApplied" value="0">
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Terms & Conditions Preview -->
+                    <div class="mt-4 border-top pt-4">
+                        <div class="p-3 bg-light rounded-4 border">
+                            <h6 class="fw-bold mb-3"><i class="fas fa-file-contract me-2 text-primary"></i>Terms & Conditions Preview</h6>
+                            <div class="small text-muted mb-3" style="max-height: 150px; overflow-y: auto;">
+                                <ol class="ps-3 mb-0">
+                                    <?php 
+                                    $settings = $pdo->query("SELECT terms_conditions FROM settings WHERE id=1")->fetch();
+                                    $terms = !empty($settings['terms_conditions']) ? explode("\n", $settings['terms_conditions']) : [
+                                        "Fees once paid are non-refundable and non-transferable.",
+                                        "Minimum 75% attendance is mandatory for certification.",
+                                        "Institute reserves the right to modify batch timings.",
+                                        "Students must carry their ID cards at all times.",
+                                        "Any damage to property will be charged to the student.",
+                                        "Placement assistance is subject to performance and attendance.",
+                                        "Disputes are subject to local jurisdiction only."
+                                    ];
+                                    foreach($terms as $term):
+                                        if(trim($term)):
+                                    ?>
+                                        <li class="mb-1"><?php echo trim($term); ?></li>
+                                    <?php 
+                                        endif;
+                                    endforeach; 
+                                    ?>
+                                </ol>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="" id="termsAgree" required>
+                                <label class="form-check-label small fw-bold" for="termsAgree">
+                                    I confirm that the student has read and agreed to the above Terms & Conditions.
+                                </label>
                             </div>
                         </div>
                     </div>
