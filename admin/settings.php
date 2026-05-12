@@ -18,7 +18,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_settings'])) {
     $website = $_POST['institute_website'] ?? '';
     $slogan = $_POST['slogan'] ?? '';
     $terms = $_POST['terms_conditions'] ?? '';
-    $referral_enabled = isset($_POST['referral_system_enabled']) ? 1 : 0;
+    $discount_pct = $_POST['referral_discount_percent'] ?? 0;
+    $bonus_pct = $_POST['referral_bonus_percent'] ?? 0;
     
     try {
         $logo_path = null;
@@ -37,11 +38,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_settings'])) {
         }
 
         if ($logo_path) {
-            $stmt = $pdo->prepare("UPDATE settings SET institute_name=?, institute_email=?, institute_phone=?, institute_address=?, institute_website=?, slogan=?, terms_conditions=?, referral_system_enabled=?, institute_logo=? WHERE id=1");
-            $stmt->execute([$name, $email, $phone, $address, $website, $slogan, $terms, $referral_enabled, $logo_path]);
+            $stmt = $pdo->prepare("UPDATE settings SET institute_name=?, institute_email=?, institute_phone=?, institute_address=?, institute_website=?, slogan=?, terms_conditions=?, referral_discount_percent=?, referral_bonus_percent=?, institute_logo=? WHERE id=1");
+            $stmt->execute([$name, $email, $phone, $address, $website, $slogan, $terms, $discount_pct, $bonus_pct, $logo_path]);
         } else {
-            $stmt = $pdo->prepare("UPDATE settings SET institute_name=?, institute_email=?, institute_phone=?, institute_address=?, institute_website=?, slogan=?, terms_conditions=?, referral_system_enabled=? WHERE id=1");
-            $stmt->execute([$name, $email, $phone, $address, $website, $slogan, $terms, $referral_enabled]);
+            $stmt = $pdo->prepare("UPDATE settings SET institute_name=?, institute_email=?, institute_phone=?, institute_address=?, institute_website=?, slogan=?, terms_conditions=?, referral_discount_percent=?, referral_bonus_percent=? WHERE id=1");
+            $stmt->execute([$name, $email, $phone, $address, $website, $slogan, $terms, $discount_pct, $bonus_pct]);
         }
         $success = "Settings updated successfully!";
     } catch (Exception $e) {
@@ -157,12 +158,25 @@ include '../includes/sidebar.php';
                     </div>
                     <div class="p-4">
                         <!-- Feature Controls -->
-                        <div class="mb-4 pb-4 border-bottom">
-                            <h6 class="fw-bold mb-3 small text-muted text-uppercase">System Features</h6>
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" name="referral_system_enabled" id="referralToggle" <?php echo ($settings['referral_system_enabled'] ?? 1) ? 'checked' : ''; ?>>
-                                <label class="form-check-label fw-bold" for="referralToggle">Refer & Earn System</label>
-                                <p class="text-muted x-small mb-0 mt-1">Manage student referral rewards and tracking.</p>
+                        <div class="mb-4 pb-3 border-bottom">
+                            <h6 class="fw-bold mb-3 small text-muted text-uppercase">Referral Rewards (%)</h6>
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <label class="form-label x-small fw-bold text-muted text-uppercase mb-1">Student Discount</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" step="0.01" name="referral_discount_percent" class="form-control rounded-start-3" value="<?php echo htmlspecialchars($settings['referral_discount_percent'] ?? '5.00'); ?>">
+                                        <span class="input-group-text bg-white rounded-end-3">%</span>
+                                    </div>
+                                    <p class="text-muted x-small mb-0 mt-1">Given to the new student.</p>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label x-small fw-bold text-muted text-uppercase mb-1">Referrer Bonus</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" step="0.01" name="referral_bonus_percent" class="form-control rounded-start-3" value="<?php echo htmlspecialchars($settings['referral_bonus_percent'] ?? '5.00'); ?>">
+                                        <span class="input-group-text bg-white rounded-end-3">%</span>
+                                    </div>
+                                    <p class="text-muted x-small mb-0 mt-1">Earned by the referrer.</p>
+                                </div>
                             </div>
                         </div>
 

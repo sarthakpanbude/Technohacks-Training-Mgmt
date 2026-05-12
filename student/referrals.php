@@ -11,6 +11,7 @@ $stmt = $pdo->prepare("SELECT enrollment_no FROM students WHERE user_id = ?");
 $stmt->execute([$userId]);
 $student = $stmt->fetch();
 $enrollment_no = $student['enrollment_no'];
+$settings = $pdo->query("SELECT * FROM settings WHERE id=1")->fetch();
 
 // Handle Fee Adjustment Request
 if (isset($_POST['use_bonus'])) {
@@ -50,7 +51,7 @@ include '../includes/sidebar.php';
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="fw-bold mb-0">Refer & Earn</h2>
-            <p class="text-muted">Invite your friends and earn 10% bonus on their admission.</p>
+            <p class="text-muted">Invite your friends and earn <?php echo $settings['referral_bonus_percent'] ?? '10'; ?>% bonus on their admission.</p>
         </div>
         <div class="bg-white p-3 rounded shadow-sm">
             <small class="text-muted d-block">Your Referral ID</small>

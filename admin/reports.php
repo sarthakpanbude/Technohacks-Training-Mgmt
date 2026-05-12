@@ -121,7 +121,7 @@ include '../includes/sidebar.php';
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <span class="text-muted x-small fw-bold text-uppercase d-block">Sales</span>
-                        <h4 class="fw-bold mb-0">₹<?php echo number_format($totalSales, 0); ?></h4>
+                        <h4 class="fw-bold mb-0"><?php echo $settings['currency'] ?? '₹'; ?><?php echo number_format($totalSales, 0); ?></h4>
                     </div>
                     <div class="bg-primary bg-opacity-10 p-2 rounded-3"><i class="fas fa-shopping-cart text-primary small"></i></div>
                 </div>
@@ -132,7 +132,7 @@ include '../includes/sidebar.php';
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <span class="text-muted x-small fw-bold text-uppercase d-block">Revenue</span>
-                        <h4 class="fw-bold mb-0">₹<?php echo number_format($totalRevenue, 0); ?></h4>
+                        <h4 class="fw-bold mb-0"><?php echo $settings['currency'] ?? '₹'; ?><?php echo number_format($totalRevenue, 0); ?></h4>
                     </div>
                     <div class="bg-success bg-opacity-10 p-2 rounded-3"><i class="fas fa-wallet text-success small"></i></div>
                 </div>
@@ -143,7 +143,7 @@ include '../includes/sidebar.php';
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <span class="text-muted x-small fw-bold text-uppercase d-block">Profit</span>
-                        <h4 class="fw-bold mb-0">₹<?php echo number_format($totalProfit, 0); ?></h4>
+                        <h4 class="fw-bold mb-0"><?php echo $settings['currency'] ?? '₹'; ?><?php echo number_format($totalProfit, 0); ?></h4>
                     </div>
                     <div class="bg-info bg-opacity-10 p-2 rounded-3"><i class="fas fa-chart-line text-info small"></i></div>
                 </div>
@@ -154,7 +154,7 @@ include '../includes/sidebar.php';
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <span class="text-muted x-small fw-bold text-uppercase d-block">Pending</span>
-                        <h4 class="fw-bold mb-0">₹<?php echo number_format($totalPending, 0); ?></h4>
+                        <h4 class="fw-bold mb-0"><?php echo $settings['currency'] ?? '₹'; ?><?php echo number_format($totalPending, 0); ?></h4>
                     </div>
                     <div class="bg-danger bg-opacity-10 p-2 rounded-3"><i class="fas fa-clock text-danger small"></i></div>
                 </div>

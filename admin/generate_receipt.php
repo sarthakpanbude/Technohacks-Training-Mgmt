@@ -443,45 +443,45 @@ $settings = $pdo->query("SELECT * FROM settings WHERE id=1")->fetch();
         <div class="subtotal-bar">
             <span>SUBTOTAL</span>
             <div class="d-flex gap-5">
-                <span><?php echo $settings['currency'] ?? '₹'; ?> <?php echo number_format($calc_std_fee, 2); ?></span>
+                <span><?php echo number_format($calc_std_fee, 2); ?></span>
             </div>
         </div>
 
         <div class="totals-section">
             <div class="total-row">
                 <div class="total-label">STANDARD COURSE FEE</div>
-                <div class="total-value"><?php echo $settings['currency'] ?? '₹'; ?> <?php echo number_format($calc_std_fee, 2); ?></div>
+                <div class="total-value"><?php echo number_format($calc_std_fee, 2); ?></div>
             </div>
             <div class="total-row text-primary">
                 <div class="total-label">SPECIAL DISCOUNT</div>
-                <div class="total-value">- <?php echo $settings['currency'] ?? '₹'; ?> <?php echo number_format($s['other_discount'] ?? 0, 2); ?></div>
+                <div class="total-value">- <?php echo number_format($s['other_discount'] ?? 0, 2); ?></div>
             </div>
             <div class="total-row text-success">
                 <div class="total-label">REFERRAL DISCOUNT</div>
-                <div class="total-value">- <?php echo $settings['currency'] ?? '₹'; ?> <?php echo number_format($discount_info['discount_amount'] ?? 0, 2); ?></div>
+                <div class="total-value">- <?php echo number_format($discount_info['discount_amount'] ?? 0, 2); ?></div>
             </div>
             <div class="total-row grand-total">
                 <div class="total-label">TOTAL PAYABLE FEE</div>
-                <div class="total-value"><?php echo $settings['currency'] ?? '₹'; ?> <?php echo number_format($total_fees, 2); ?></div>
+                <div class="total-value"><?php echo number_format($total_fees, 2); ?></div>
             </div>
             <?php if ($installment_data): ?>
             <div class="total-row">
                 <div class="total-label">Previously Paid</div>
-                <div class="total-value"><?php echo $settings['currency'] ?? '₹'; ?> <?php echo number_format($previous_paid, 2); ?></div>
+                <div class="total-value"><?php echo number_format($previous_paid, 2); ?></div>
             </div>
             <div class="total-row text-success">
                 <div class="total-label">Current Payment</div>
-                <div class="total-value"><?php echo $settings['currency'] ?? '₹'; ?> <?php echo number_format($paid_amount, 2); ?></div>
+                <div class="total-value"><?php echo number_format($paid_amount, 2); ?></div>
             </div>
             <?php else: ?>
             <div class="total-row text-success">
                 <div class="total-label">Received Amount</div>
-                <div class="total-value"><?php echo $settings['currency'] ?? '₹'; ?> <?php echo number_format($paid_amount, 2); ?></div>
+                <div class="total-value"><?php echo number_format($paid_amount, 2); ?></div>
             </div>
             <?php endif; ?>
             <div class="total-row text-danger fw-bold border-top pt-1 mt-1">
                 <div class="total-label">Pending Balance</div>
-                <div class="total-value"><?php echo $settings['currency'] ?? '₹'; ?> <?php echo number_format($balance, 2); ?></div>
+                <div class="total-value"><?php echo number_format($balance, 2); ?></div>
             </div>
 
             <div class="amount-in-words">
@@ -498,7 +498,7 @@ $settings = $pdo->query("SELECT * FROM settings WHERE id=1")->fetch();
                 <div class="col-6">
                     <div class="p-2 border rounded bg-light" style="font-size: 11px;">
                         <div class="small text-muted">2nd Installment</div>
-                        <div class="fw-bold">₹ <?php echo number_format($s['next_installment_amount'], 2); ?></div>
+                        <div class="fw-bold"><?php echo number_format($s['next_installment_amount'], 2); ?></div>
                         <div class="text-primary">Due: <?php echo date('d M Y', strtotime($s['next_installment_date'])); ?></div>
                     </div>
                 </div>
@@ -507,7 +507,7 @@ $settings = $pdo->query("SELECT * FROM settings WHERE id=1")->fetch();
                 <div class="col-6">
                     <div class="p-2 border rounded bg-light" style="font-size: 11px;">
                         <div class="small text-muted">3rd Installment</div>
-                        <div class="fw-bold">₹ <?php echo number_format($s['third_installment_amount'], 2); ?></div>
+                        <div class="fw-bold"><?php echo number_format($s['third_installment_amount'], 2); ?></div>
                         <div class="text-primary">Due: <?php echo date('d M Y', strtotime($s['third_installment_date'])); ?></div>
                     </div>
                 </div>

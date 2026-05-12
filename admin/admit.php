@@ -3,9 +3,11 @@ require_once '../includes/auth.php';
 checkAuth('admin');
 require_once '../config/db.php';
 
-// Fetch Referral System Status
-$sys_settings = $pdo->query("SELECT referral_system_enabled FROM settings WHERE id=1")->fetch();
-$referral_enabled = $sys_settings['referral_system_enabled'] ?? 1;
+// Fetch System Settings
+$settings = $pdo->query("SELECT * FROM settings WHERE id=1")->fetch();
+$referral_enabled = true; // Now always enabled if values are set, or I can keep the logic
+$discount_pct = $settings['referral_discount_percent'] ?? 5.00;
+$bonus_pct = $settings['referral_bonus_percent'] ?? 10.00;
 
 $pageTitle = "Admission Form";
 $activePage = "visitors";
@@ -138,7 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['confirm_admission'])) 
 
         // 6. Referral Bonus
         if (!empty($_POST['referral_id']) && $total > 0) {
-            $bonus = $total * 0.10;
+            $bonus = $total * ($bonus_pct / 100);
             $stmt = $pdo->prepare("INSERT INTO referral_bonus (referrer_id, referred_student_id, bonus_amount, status) VALUES (?, ?, ?, 'pending')");
             $stmt->execute([$_POST['referral_id'], $student_id, $bonus]);
         }
@@ -157,11 +159,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['confirm_admission'])) 
             $referred_id = $student_id;
             
             $original_fee = $_POST['total_fee']; // This is the final fee after discount
-            $discount_amount = $_POST['referral_discount_applied'] ? ($original_fee / 0.95) * 0.05 : 0; 
-            // Wait, the logic for discount should be: Original -> 5% disc -> Final.
-            // If they entered a code, we stored the final fee in total_fee.
+            $discount_amount = $_POST['referral_discount_applied'] ? ($original_fee / (1 - ($discount_pct / 100))) * ($discount_pct / 100) : 0; 
             
-            $bonus_amount = $original_fee * 0.10; // 10% of final fee
+            $bonus_amount = $original_fee * ($bonus_pct / 100); // Dynamic bonus % of final fee
             
             // Calculate Refund Expiry Date based on fee (7 days for small courses < 6000, else 14 days)
             $days = ($original_fee < 6000) ? 7 : 14;
@@ -342,7 +342,17 @@ include '../includes/sidebar.php';
                         </div>
                         <div class="col-md-4">
                             <label class="form-label small fw-bold">Course Duration</label>
-                            <input type="text" name="duration" class="form-control" placeholder="e.g. 6 months" required>
+                            <select name="duration_select" id="durationSelect" class="form-select" onchange="handleDurationChange()" required>
+                                <option value="1 Month">1 Month</option>
+                                <option value="1.5 Months">1.5 Months</option>
+                                <option value="2 Months">2 Months</option>
+                                <option value="3 Months">3 Months</option>
+                                <option value="4 Months">4 Months</option>
+                                <option value="6 Months" selected>6 Months</option>
+                                <option value="8 Months">8 Months</option>
+                                <option value="Other">Other</option>
+                            </select>
+                            <input type="text" name="duration" id="manualDuration" class="form-control mt-2" placeholder="Enter duration" style="display:none;" value="6 Months">
                         </div>
                         <div class="col-md-4">
                             <label class="form-label small fw-bold">Profile Photo</label>
@@ -409,7 +419,7 @@ include '../includes/sidebar.php';
                                     </div>
                                     <?php if ($referral_enabled): ?>
                                     <div class="d-flex justify-content-between align-items-center mb-2" id="referralDiscountRow">
-                                        <span class="text-muted small">Referral Discount (5%):</span>
+                                        <span class="text-muted small">Referral Discount (<?php echo $discount_pct; ?>%):</span>
                                         <span class="fw-bold text-success" id="referralDiscountDisplay">-₹0.00</span>
                                     </div>
                                     <?php endif; ?>
@@ -432,6 +442,7 @@ include '../includes/sidebar.php';
                                     <div class="col-md-6">
                                         <label class="form-label small fw-bold">Paid Today (₹)</label>
                                         <input type="number" name="paid_fee" id="paidFee" class="form-control bg-white fw-bold text-success" placeholder="0.00" oninput="calculateInstallments()">
+                                        <small id="paidFeeError" class="text-danger fw-bold mt-1 d-block" style="display:none; font-size: 0.7rem;">Enter valid amount to ensure details are correct</small>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label small fw-bold">Payment Mode</label>
@@ -469,7 +480,7 @@ include '../includes/sidebar.php';
                                     </div>
                                     <input type="hidden" name="referral_id" id="referralId">
                                     <input type="hidden" name="referral_discount_applied" id="referralDiscountApplied" value="0">
-                                    <small id="referralStatus" class="text-muted" style="font-size: 0.7rem;">Enter a valid code to get 5% discount.</small>
+                                    <small id="referralStatus" class="text-muted" style="font-size: 0.7rem;">Enter a valid code to get <?php echo $discount_pct; ?>% discount.</small>
                                 </div>
                                 <?php else: ?>
                                     <input type="hidden" name="referral_id" id="referralId" value="">
@@ -535,6 +546,8 @@ const allCourses = <?php
     $courses = $pdo->query("SELECT course_name, course_type, fees FROM courses ORDER BY course_name ASC")->fetchAll(PDO::FETCH_ASSOC);
     echo json_encode($courses);
 ?>;
+const discountPct = <?php echo $discount_pct; ?>;
+const bonusPct = <?php echo $bonus_pct; ?>;
 
 function filterCourses() {
     const type = document.getElementById('typeSelect').value;
@@ -599,6 +612,19 @@ function handleCourseChange() {
     calculateFinalFee();
 }
 
+function handleDurationChange() {
+    const select = document.getElementById('durationSelect');
+    const manual = document.getElementById('manualDuration');
+    if (select.value === 'Other') {
+        manual.style.display = 'block';
+        manual.value = '';
+        manual.focus();
+    } else {
+        manual.style.display = 'none';
+        manual.value = select.value;
+    }
+}
+
 function toggleFeeEdit() {
     const display = document.getElementById('baseFeeDisplay');
     const feeStatus = document.getElementById('feeStatus');
@@ -625,7 +651,7 @@ function validateReferralCode() {
     const discInput = document.getElementById('referralDiscountApplied');
 
     if (!code) {
-        status.innerHTML = "Enter a valid code to get 5% discount.";
+        status.innerHTML = `Enter a valid code to get ${discountPct}% discount.`;
         status.className = "text-muted";
         referralId.value = "";
         discInput.value = "0";
@@ -637,7 +663,7 @@ function validateReferralCode() {
         .then(response => response.json())
         .then(data => {
             if (data.valid) {
-                status.innerHTML = `<i class="fas fa-check-circle me-1"></i> Valid code! 5% discount applied. (Referrer: ${data.name})`;
+                status.innerHTML = `<i class="fas fa-check-circle me-1"></i> Valid code! ${discountPct}% discount applied. (Referrer: ${data.name})`;
                 status.className = "text-success small fw-bold";
                 referralId.value = data.enrollment_no;
                 discInput.value = "1";
@@ -669,7 +695,7 @@ function calculateFinalFee() {
 
     // Apply Referral Discount (5%)
     if (referralDiscountApplied) {
-        const refDisc = final * 0.05;
+        const refDisc = final * (discountPct / 100);
         final -= refDisc;
         document.getElementById('referralDiscountDisplay').textContent = '-₹' + refDisc.toLocaleString('en-IN', {minimumFractionDigits: 2});
     } else {
@@ -686,8 +712,28 @@ function calculateFinalFee() {
 
 function calculateInstallments() {
     const total = parseFloat(document.getElementById('finalTotalFee').value) || 0;
-    const paid = parseFloat(document.getElementById('paidFee').value) || 0;
+    const paidInput = document.getElementById('paidFee');
+    const paidError = document.getElementById('paidFeeError');
     const count = parseInt(document.getElementById('installmentCount').value);
+    
+    // 1. One-time payment autodetection
+    if (count === 1) {
+        paidInput.value = total.toFixed(2);
+    }
+    
+    let paid = parseFloat(paidInput.value) || 0;
+
+    // 2. Validation: Ensure paid amount <= total
+    if (paid > total) {
+        paidError.style.display = 'block';
+        paidInput.classList.add('is-invalid');
+        paid = total;
+        paidInput.value = total.toFixed(2);
+    } else {
+        paidError.style.display = 'none';
+        paidInput.classList.remove('is-invalid');
+    }
+
     const container = document.getElementById('installmentBreakdown');
     const list = document.getElementById('installmentList');
     const balance = total - paid;

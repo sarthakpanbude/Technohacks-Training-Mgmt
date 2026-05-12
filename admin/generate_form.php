@@ -481,7 +481,7 @@ $settings = $pdo->query("SELECT * FROM settings WHERE id=1")->fetch();
             ?>
             <tr>
                 <th>Standard Fee</th>
-                <td><?php echo $settings['currency'] ?? '₹'; ?><?php echo number_format($calc_std_fee, 2); ?></td>
+                <td><?php echo number_format($calc_std_fee, 2); ?></td>
                 <th>Payment Mode</th>
                 <td><?php echo htmlspecialchars($s['payment_mode'] ?? 'N/A'); ?></td>
             </tr>
@@ -489,14 +489,14 @@ $settings = $pdo->query("SELECT * FROM settings WHERE id=1")->fetch();
                 <th>Discounts Applied</th>
                 <td colspan="3">
                     <div style="display: flex; gap: 15px; font-size: 11px;">
-                        <span>• Special Discount: <strong>-<?php echo $settings['currency'] ?? '₹'; ?><?php echo number_format($s['other_discount'] ?? 0, 2); ?></strong></span>
-                        <span>• Referral Discount: <strong>-<?php echo $settings['currency'] ?? '₹'; ?><?php echo number_format($referral_discount, 2); ?></strong></span>
+                        <span>• Special Discount: <strong>-<?php echo number_format($s['other_discount'] ?? 0, 2); ?></strong></span>
+                        <span>• Referral Discount: <strong>-<?php echo number_format($referral_discount, 2); ?></strong></span>
                     </div>
                 </td>
             </tr>
             <tr>
                 <th>Final Payable Fee</th>
-                <td colspan="3"><strong style="font-size: 16px; color: #800080;"><?php echo $settings['currency'] ?? '₹'; ?><?php echo number_format($s['total_fee'] ?? 0, 2); ?></strong></td>
+                <td colspan="3"><strong style="font-size: 16px; color: #800080;"><?php echo number_format($s['total_fee'] ?? 0, 2); ?></strong></td>
             </tr>
         </table>
 

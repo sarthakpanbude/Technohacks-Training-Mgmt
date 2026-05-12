@@ -122,6 +122,9 @@ $balance = $course_fees - $total_received;
 $invoice_date = date('d/m/Y', strtotime($payment['payment_date']));
 $due_date = date('d/m/Y', strtotime($payment['payment_date'] . ' + 30 days'));
 
+// Fetch Institute Settings
+$settings = $pdo->query("SELECT * FROM settings WHERE id=1")->fetch();
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -444,34 +447,34 @@ $due_date = date('d/m/Y', strtotime($payment['payment_date'] . ' + 30 days'));
         <div class="subtotal-bar">
             <span>SUBTOTAL</span>
             <div class="d-flex gap-5">
-                <span>₹ <?php echo number_format($calc_std_fee, 2); ?></span>
+                <span><?php echo number_format($calc_std_fee, 2); ?></span>
             </div>
         </div>
 
         <div class="totals-section">
             <div class="total-row">
                 <div class="total-label">STANDARD COURSE FEE</div>
-                <div class="total-value">₹ <?php echo number_format($calc_std_fee, 2); ?></div>
+                <div class="total-value"><?php echo number_format($calc_std_fee, 2); ?></div>
             </div>
             <div class="total-row text-primary">
                 <div class="total-label">SPECIAL DISCOUNT</div>
-                <div class="total-value">- ₹ <?php echo number_format($payment['other_discount'] ?? 0, 2); ?></div>
+                <div class="total-value">- <?php echo number_format($payment['other_discount'] ?? 0, 2); ?></div>
             </div>
             <div class="total-row text-success">
                 <div class="total-label">REFERRAL DISCOUNT</div>
-                <div class="total-value">- ₹ <?php echo number_format($discount_info['discount_amount'] ?? 0, 2); ?></div>
+                <div class="total-value">- <?php echo number_format($discount_info['discount_amount'] ?? 0, 2); ?></div>
             </div>
             <div class="total-row grand-total">
                 <div class="total-label">TOTAL PAYABLE FEE</div>
-                <div class="total-value">₹ <?php echo number_format($student_total_fee, 2); ?></div>
+                <div class="total-value"><?php echo number_format($student_total_fee, 2); ?></div>
             </div>
             <div class="total-row">
                 <div class="total-label">Received Amount</div>
-                <div class="total-value">₹ <?php echo number_format($total_received, 2); ?></div>
+                <div class="total-value"><?php echo number_format($total_received, 2); ?></div>
             </div>
             <div class="total-row text-danger">
                 <div class="total-label">Pending Balance</div>
-                <div class="total-value">₹ <?php echo number_format($balance, 2); ?></div>
+                <div class="total-value"><?php echo number_format($balance, 2); ?></div>
             </div>
 
             <div class="amount-in-words">
@@ -489,7 +492,7 @@ $due_date = date('d/m/Y', strtotime($payment['payment_date'] . ' + 30 days'));
                         <div class="col-6">
                             <div class="p-3 border rounded bg-light">
                                 <div class="small text-muted mb-1">Installment #<?php echo $inst['installment_no']; ?></div>
-                                <div class="fw-bold fs-5">₹ <?php echo number_format($inst['amount'], 2); ?></div>
+                                <div class="fw-bold fs-5"><?php echo number_format($inst['amount'], 2); ?></div>
                                 <div class="small text-primary">Due: <?php echo date('d M Y', strtotime($inst['due_date'])); ?>
                                 </div>
                             </div>
