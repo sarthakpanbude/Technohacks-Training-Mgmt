@@ -7,7 +7,7 @@ $pageTitle = "Fees Management";
 $activePage = "fees";
 
 // Fetch Students with their fee details
-$stmt = $pdo->query("SELECT s.id as student_real_id, s.enrollment_no, u.full_name, s.course, 
+$stmt = $pdo->query("SELECT s.id as student_real_id, s.enrollment_no, s.permanent_id, u.full_name, s.course, 
                             sf.total_fee, sf.pending_fee, sf.installments as total_installments,
                             (SELECT COUNT(*) FROM installments WHERE student_id = s.id AND status = 'Paid') as paid_count
                      FROM students s 
@@ -61,7 +61,7 @@ include '../includes/sidebar.php';
                         ?>
                             <tr>
                                 <td class="px-4">
-                                    <span class="fw-bold text-dark"><?php echo htmlspecialchars($f['enrollment_no']); ?></span>
+                                    <span class="fw-bold text-dark"><?php echo htmlspecialchars($f['permanent_id'] ?? $f['enrollment_no']); ?></span>
                                 </td>
                                 <td class="fw-bold text-dark"><?php echo htmlspecialchars($f['full_name']); ?></td>
                                 <td>

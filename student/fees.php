@@ -7,14 +7,19 @@ $pageTitle = "My Fees";
 $activePage = "fees";
 
 $userId = $_SESSION['user_id'];
-$student = $pdo->prepare("SELECT id FROM students WHERE user_id = ?");
-$student->execute([$userId]);
-$s_data = $student->fetch();
-$studentId = $s_data['id'] ?? 0;
 
-$payments = $pdo->prepare("SELECT * FROM payments WHERE student_id = ? ORDER BY payment_date DESC");
-$payments->execute([$studentId]);
-$payments = $payments->fetchAll();
+// Fetch all student record IDs for this user
+$all_student_ids = $pdo->prepare("SELECT id FROM students WHERE user_id = ?");
+$all_student_ids->execute([$userId]);
+$student_ids = $all_student_ids->fetchAll(PDO::FETCH_COLUMN);
+
+$payments = [];
+if (!empty($student_ids)) {
+    $placeholders = implode(',', array_fill(0, count($student_ids), '?'));
+    $payments = $pdo->prepare("SELECT p.*, s.course FROM payments p JOIN students s ON p.student_id = s.id WHERE p.student_id IN ($placeholders) ORDER BY p.payment_date DESC");
+    $payments->execute($student_ids);
+    $payments = $payments->fetchAll();
+}
 
 include '../includes/header.php';
 include '../includes/sidebar.php';
@@ -36,6 +41,7 @@ include '../includes/sidebar.php';
                     <thead class="bg-light">
                         <tr>
                             <th class="border-0">Receipt No</th>
+                            <th class="border-0">Course</th>
                             <th class="border-0">Amount</th>
                             <th class="border-0">Type</th>
                             <th class="border-0">Method</th>
@@ -47,6 +53,7 @@ include '../includes/sidebar.php';
                         <?php foreach ($payments as $p): ?>
                         <tr>
                             <td class="fw-bold text-primary"><?php echo $p['receipt_no']; ?></td>
+                            <td><span class="small fw-bold text-dark"><?php echo htmlspecialchars($p['course']); ?></span></td>
                             <td class="fw-bold">₹<?php echo number_format($p['amount'], 2); ?></td>
                             <td><span class="badge bg-info bg-opacity-10 text-info rounded-pill text-capitalize"><?php echo str_replace('_', ' ', $p['payment_type']); ?></span></td>
                             <td class="text-capitalize text-muted small"><?php echo $p['payment_method']; ?></td>

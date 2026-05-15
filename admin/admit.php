@@ -14,13 +14,61 @@ $activePage = "visitors";
 
 // Handle fresh admission request
 if (isset($_GET['new']) && $_GET['new'] == 1) {
+    $prefill_email = $_GET['email'] ?? '';
     $inquiry = [
         'id' => 0,
         'name' => '',
         'mobile' => '',
-        'email' => '',
-        'course' => ''
+        'email' => $prefill_email,
+        'course' => '',
+        'permanent_id' => '',
+        'dob' => '',
+        'address' => '',
+        'gender' => '',
+        'qualification' => '',
+        'college_name' => '',
+        'passing_year' => '',
+        'photo_path' => '',
+        'id_path' => ''
     ];
+
+    if ($prefill_email) {
+        $stmt = $pdo->prepare("SELECT u.full_name as name, s.phone as mobile, u.email, s.permanent_id, s.dob, s.address, b.gender, s.enrollment_no 
+                               FROM users u 
+                               JOIN students s ON u.id = s.user_id 
+                               LEFT JOIN students_basic b ON s.enrollment_no = b.student_id
+                               WHERE u.email = ? 
+                               ORDER BY s.created_at ASC LIMIT 1");
+        $stmt->execute([$prefill_email]);
+        $existing = $stmt->fetch();
+        if ($existing) {
+            $inquiry['name'] = $existing['name'];
+            $inquiry['mobile'] = $existing['mobile'];
+            $inquiry['permanent_id'] = $existing['permanent_id'];
+            $inquiry['dob'] = $existing['dob'];
+            $inquiry['address'] = $existing['address'];
+            $inquiry['gender'] = $existing['gender'];
+
+            // Fetch Education Details
+            $edu = $pdo->prepare("SELECT * FROM education WHERE student_id = ? LIMIT 1");
+            $edu->execute([$existing['enrollment_no']]);
+            $eduData = $edu->fetch();
+            if ($eduData) {
+                $inquiry['qualification'] = $eduData['qualification'];
+                $inquiry['college_name'] = $eduData['college_name'];
+                $inquiry['passing_year'] = $eduData['passing_year'];
+            }
+
+            // Fetch Document Details
+            $docs = $pdo->prepare("SELECT doc_type, file_path FROM student_documents WHERE student_id = ?");
+            $docs->execute([$existing['enrollment_no']]);
+            $docsList = $docs->fetchAll();
+            foreach ($docsList as $d) {
+                if ($d['doc_type'] == 'photo') $inquiry['photo_path'] = $d['file_path'];
+                if ($d['doc_type'] == 'id_proof') $inquiry['id_path'] = $d['file_path'];
+            }
+        }
+    }
 } else {
     $inquiry_id = $_GET['id'] ?? null;
     if (!$inquiry_id) {
@@ -64,12 +112,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['confirm_admission'])) 
 
         
         // Generate Student ID (Short Format: T + 5 random digits)
+        // 1. Generate Enrollment ID (Starts with E)
         do {
             $rand = rand(10000, 99999);
-            $student_id = "T" . $rand;
-            $check = $pdo->prepare("SELECT id FROM students_basic WHERE student_id = ?");
-            $check->execute([$student_id]);
+            $enrollment_id = "E" . $rand;
+            // Check enrollment_no uniqueness
+            $check = $pdo->prepare("SELECT id FROM students WHERE enrollment_no = ?");
+            $check->execute([$enrollment_id]);
         } while ($check->fetch());
+
+        $perm_id = !empty($_POST['permanent_id']) ? $_POST['permanent_id'] : '';
+        if (empty($perm_id)) {
+            do {
+                $rand = rand(10000, 99999);
+                $perm_id = "T" . $rand;
+                // Check if this ID already exists as permanent_id OR referral_code
+                $check = $pdo->prepare("SELECT id FROM students WHERE permanent_id = ? OR referral_code = ?");
+                $check->execute([$perm_id, $perm_id]);
+            } while ($check->fetch());
+        }
 
         // File Uploads
         $photo_path = null;
@@ -80,31 +141,36 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['confirm_admission'])) 
         if (!empty($_FILES['photo']['name'])) {
             $photo_path = 'uploads/students/' . time() . '_photo_' . $_FILES['photo']['name'];
             move_uploaded_file($_FILES['photo']['tmp_name'], '../' . $photo_path);
+        } else {
+            $photo_path = $_POST['existing_photo'] ?? null;
         }
+
         if (!empty($_FILES['id_proof']['name'])) {
             $id_path = 'uploads/students/' . time() . '_id_' . $_FILES['id_proof']['name'];
             move_uploaded_file($_FILES['id_proof']['tmp_name'], '../' . $id_path);
+        } else {
+            $id_path = $_POST['existing_id_proof'] ?? null;
         }
 
         $course_name = $_POST['course_type'] == 'Other' ? $_POST['other_course'] : $_POST['course'];
 
-        // 1. Basic & Personal (Providing defaults for removed fields to prevent DB errors)
+        // 1. Basic & Personal
         $stmt = $pdo->prepare("INSERT INTO students_basic (student_id, full_name, dob, gender, email, course, start_date, duration) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$student_id, $_POST['full_name'], $_POST['dob'], $_POST['gender'], $_POST['email'], $course_name, $_POST['start_date'], $_POST['duration']]);
+        $stmt->execute([$enrollment_id, $_POST['full_name'], $_POST['dob'], $_POST['gender'], $_POST['email'], $course_name, $_POST['start_date'], $_POST['duration']]);
 
         $stmt = $pdo->prepare("INSERT INTO personal_details (student_id, category, nationality, address, permanent_address) VALUES (?, ?, ?, ?, ?)");
-        $stmt->execute([$student_id, 'General', 'Indian', $_POST['address'], $_POST['address']]);
+        $stmt->execute([$enrollment_id, 'General', 'Indian', $_POST['address'], $_POST['address']]);
 
         // 2. Education
         $stmt = $pdo->prepare("INSERT INTO education (student_id, qualification, college_name, passing_year) VALUES (?, ?, ?, ?)");
-        $stmt->execute([$student_id, $_POST['qualification'], $_POST['college_name'], $_POST['passing_year']]);
+        $stmt->execute([$enrollment_id, $_POST['qualification'], $_POST['college_name'], $_POST['passing_year']]);
 
         // 3. Documents
         if ($photo_path) {
-            $pdo->prepare("INSERT INTO student_documents (student_id, doc_type, file_path) VALUES (?, 'photo', ?)")->execute([$student_id, $photo_path]);
+            $pdo->prepare("INSERT INTO student_documents (student_id, doc_type, file_path) VALUES (?, 'photo', ?)")->execute([$enrollment_id, $photo_path]);
         }
         if ($id_path) {
-            $pdo->prepare("INSERT INTO student_documents (student_id, doc_type, file_path) VALUES (?, 'id_proof', ?)")->execute([$student_id, $id_path]);
+            $pdo->prepare("INSERT INTO student_documents (student_id, doc_type, file_path) VALUES (?, 'id_proof', ?)")->execute([$enrollment_id, $id_path]);
         }
 
         // 4. Fees
@@ -114,7 +180,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['confirm_admission'])) 
         $paid = $_POST['paid_fee'] ?: 0;
         $pending = $total - $paid;
         $stmt = $pdo->prepare("INSERT INTO student_fees (student_id, total_fee, standard_fee, other_discount, paid_fee, pending_fee, installments, payment_mode) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$student_id, $total, $std_fee, $other_disc, $paid, $pending, $_POST['installments'], $_POST['payment_mode']]);
+        $stmt->execute([$enrollment_id, $total, $std_fee, $other_disc, $paid, $pending, $_POST['installments'], $_POST['payment_mode']]);
 
         // 5. Account & Students Sync
         $password = password_hash($_POST['mobile'], PASSWORD_DEFAULT);
@@ -128,21 +194,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['confirm_admission'])) 
             $user_id = $existing_user['id'];
             $stmt = $pdo->prepare("UPDATE users SET full_name = ?, role = 'student' WHERE id = ?");
             $stmt->execute([$_POST['full_name'], $user_id]);
+
+            // Sync profile data across all student records for this user
+            $stmt = $pdo->prepare("UPDATE students SET phone = ?, address = ?, dob = ? WHERE user_id = ?");
+            $stmt->execute([$_POST['mobile'], $_POST['address'], $_POST['dob'], $user_id]);
         } else {
             $stmt = $pdo->prepare("INSERT INTO users (username, password, role, email, full_name) VALUES (?, ?, 'student', ?, ?)");
-            $stmt->execute([strtolower($student_id), $password, $_POST['email'], $_POST['full_name']]);
+            $stmt->execute([strtolower($perm_id), $password, $_POST['email'], $_POST['full_name']]);
             $user_id = $pdo->lastInsertId();
         }
 
-        $stmt = $pdo->prepare("INSERT INTO students (user_id, enrollment_no, referral_code, dob, phone, address, admission_status, referral_id, course) VALUES (?, ?, ?, ?, ?, ?, 'enrolled', ?, ?)");
-        $stmt->execute([$user_id, $student_id, $student_id, $_POST['dob'], $_POST['mobile'], $_POST['address'], (!empty($_POST['referral_id']) ? $_POST['referral_id'] : null), $course_name]);
+        $stmt = $pdo->prepare("INSERT INTO students (user_id, enrollment_no, permanent_id, referral_code, dob, phone, address, admission_status, referral_id, course) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)");
+        $stmt->execute([$user_id, $enrollment_id, $perm_id, $perm_id, $_POST['dob'], $_POST['mobile'], $_POST['address'], (!empty($_POST['referral_id']) ? $_POST['referral_id'] : null), $course_name]);
         $main_stu_id = $pdo->lastInsertId();
 
         // 6. Referral Bonus
         if (!empty($_POST['referral_id']) && $total > 0) {
             $bonus = $total * ($bonus_pct / 100);
             $stmt = $pdo->prepare("INSERT INTO referral_bonus (referrer_id, referred_student_id, bonus_amount, status) VALUES (?, ?, ?, 'pending')");
-            $stmt->execute([$_POST['referral_id'], $student_id, $bonus]);
+            $stmt->execute([$_POST['referral_id'], $enrollment_id, $bonus]);
         }
 
         // 7. Invoice & Referral Bonus Record
@@ -156,15 +226,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['confirm_admission'])) 
         // Handle Referral Bonus logic
         if (!empty($_POST['referral_id'])) {
             $referrer_id = $_POST['referral_id'];
-            $referred_id = $student_id;
+            $referred_id = $enrollment_id;
             
             $original_fee = $_POST['total_fee']; // This is the final fee after discount
             $discount_amount = $_POST['referral_discount_applied'] ? ($original_fee / (1 - ($discount_pct / 100))) * ($discount_pct / 100) : 0; 
             
             $bonus_amount = $original_fee * ($bonus_pct / 100); // Dynamic bonus % of final fee
             
-            // Calculate Refund Expiry Date based on fee (7 days for small courses < 6000, else 14 days)
-            $days = ($original_fee < 6000) ? 7 : 14;
+            // Calculate Refund Expiry Date based on tiered system settings
+            $threshold = $settings['referral_refund_threshold'] ?? 6000;
+            $days_short = $settings['referral_refund_days_short'] ?? 7;
+            $days_long = $settings['referral_refund_days_long'] ?? 14;
+            
+            $days = ($original_fee < $threshold) ? $days_short : $days_long;
             $start_date = $_POST['start_date'];
             $refund_expiry = date('Y-m-d', strtotime($start_date . " + $days days"));
 
@@ -201,7 +275,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['confirm_admission'])) 
         }
 
         $pdo->commit();
-        header("Location: admission_success.php?id=$student_id");
+        header("Location: admission_success.php?id=$enrollment_id");
         exit;
     } catch (Exception $e) {
         $pdo->rollBack();
@@ -256,6 +330,9 @@ include '../includes/sidebar.php';
         </ul>
 
         <form action="" method="POST" enctype="multipart/form-data" id="admissionForm">
+            <input type="hidden" name="permanent_id" value="<?php echo htmlspecialchars($inquiry['permanent_id'] ?? ''); ?>">
+            <input type="hidden" name="existing_photo" value="<?php echo htmlspecialchars($inquiry['photo_path'] ?? ''); ?>">
+            <input type="hidden" name="existing_id_proof" value="<?php echo htmlspecialchars($inquiry['id_path'] ?? ''); ?>">
             <div class="tab-content p-4" id="admissionTabsContent">
                 
                 <!-- Tab 1: Basic & Personal -->
@@ -275,32 +352,32 @@ include '../includes/sidebar.php';
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold">Date of Birth <span class="text-danger">*</span></label>
-                            <input type="date" name="dob" class="form-control" required>
+                            <input type="date" name="dob" class="form-control" value="<?php echo htmlspecialchars($inquiry['dob'] ?? ''); ?>" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold">Gender <span class="text-danger">*</span></label>
                             <select name="gender" class="form-select" required>
                                 <option value="">Select</option>
-                                <option value="Male">Male</option>
-                                <option value="Female">Female</option>
-                                <option value="Other">Other</option>
+                                <option value="Male" <?php echo ($inquiry['gender'] ?? '') == 'Male' ? 'selected' : ''; ?>>Male</option>
+                                <option value="Female" <?php echo ($inquiry['gender'] ?? '') == 'Female' ? 'selected' : ''; ?>>Female</option>
+                                <option value="Other" <?php echo ($inquiry['gender'] ?? '') == 'Other' ? 'selected' : ''; ?>>Other</option>
                             </select>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold">Qualification <span class="text-danger">*</span></label>
-                            <input type="text" name="qualification" class="form-control" placeholder="e.g. BE Computer Science" required>
+                            <input type="text" name="qualification" class="form-control" placeholder="e.g. BE Computer Science" value="<?php echo htmlspecialchars($inquiry['qualification'] ?? ''); ?>" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold">Passing Year <span class="text-danger">*</span></label>
-                            <input type="text" name="passing_year" class="form-control" placeholder="YYYY" required>
+                            <input type="text" name="passing_year" class="form-control" placeholder="YYYY" value="<?php echo htmlspecialchars($inquiry['passing_year'] ?? ''); ?>" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold">College/University Name <span class="text-danger">*</span></label>
-                            <input type="text" name="college_name" class="form-control" placeholder="Enter college" required>
+                            <input type="text" name="college_name" class="form-control" placeholder="Enter college" value="<?php echo htmlspecialchars($inquiry['college_name'] ?? ''); ?>" required>
                         </div>
                         <div class="col-md-12">
                             <label class="form-label small fw-bold">Address <span class="text-danger">*</span></label>
-                            <textarea name="address" class="form-control" rows="2" required placeholder="Enter full address..."></textarea>
+                            <textarea name="address" class="form-control" rows="2" required placeholder="Enter full address..."><?php echo htmlspecialchars($inquiry['address'] ?? ''); ?></textarea>
                         </div>
                     </div>
                     <div class="mt-4 text-end">
@@ -357,10 +434,16 @@ include '../includes/sidebar.php';
                         <div class="col-md-4">
                             <label class="form-label small fw-bold">Profile Photo</label>
                             <input type="file" name="photo" class="form-control" accept="image/*">
+                            <?php if (!empty($inquiry['photo_path'])): ?>
+                                <small class="text-success x-small"><i class="fas fa-check-circle"></i> Existing photo detected</small>
+                            <?php endif; ?>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold">Aadhaar/ID Proof Document</label>
                             <input type="file" name="id_proof" class="form-control">
+                            <?php if (!empty($inquiry['id_path'])): ?>
+                                <small class="text-success x-small"><i class="fas fa-check-circle"></i> Existing ID proof detected</small>
+                            <?php endif; ?>
                         </div>
                         
                         <div class="col-12 mt-3">
@@ -490,41 +573,7 @@ include '../includes/sidebar.php';
                         </div>
                     </div>
 
-                    <!-- Terms & Conditions Preview -->
-                    <div class="mt-4 border-top pt-4">
-                        <div class="p-3 bg-light rounded-4 border">
-                            <h6 class="fw-bold mb-3"><i class="fas fa-file-contract me-2 text-primary"></i>Terms & Conditions Preview</h6>
-                            <div class="small text-muted mb-3" style="max-height: 150px; overflow-y: auto;">
-                                <ol class="ps-3 mb-0">
-                                    <?php 
-                                    $settings = $pdo->query("SELECT terms_conditions FROM settings WHERE id=1")->fetch();
-                                    $terms = !empty($settings['terms_conditions']) ? explode("\n", $settings['terms_conditions']) : [
-                                        "Fees once paid are non-refundable and non-transferable.",
-                                        "Minimum 75% attendance is mandatory for certification.",
-                                        "Institute reserves the right to modify batch timings.",
-                                        "Students must carry their ID cards at all times.",
-                                        "Any damage to property will be charged to the student.",
-                                        "Placement assistance is subject to performance and attendance.",
-                                        "Disputes are subject to local jurisdiction only."
-                                    ];
-                                    foreach($terms as $term):
-                                        if(trim($term)):
-                                    ?>
-                                        <li class="mb-1"><?php echo trim($term); ?></li>
-                                    <?php 
-                                        endif;
-                                    endforeach; 
-                                    ?>
-                                </ol>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" value="" id="termsAgree" required>
-                                <label class="form-check-label small fw-bold" for="termsAgree">
-                                    I confirm that the student has read and agreed to the above Terms & Conditions.
-                                </label>
-                            </div>
-                        </div>
-                    </div>
+
 
                     <div class="mt-5 border-top pt-4 text-center">
                         <div class="alert alert-info border-0 bg-light small mb-4 shadow-sm">
@@ -719,6 +768,10 @@ function calculateInstallments() {
     // 1. One-time payment autodetection
     if (count === 1) {
         paidInput.value = total.toFixed(2);
+    } else if (parseFloat(paidInput.value) === total || !paidInput.value || paidInput.value == "0") {
+        // If switching to installments, split the fee (e.g. 1st installment = 50% for 2, 33% for 3, etc.)
+        // Or just set it to a portion to force balance > 0
+        paidInput.value = (total / count).toFixed(2);
     }
     
     let paid = parseFloat(paidInput.value) || 0;

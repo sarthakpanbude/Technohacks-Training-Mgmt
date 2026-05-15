@@ -25,14 +25,16 @@ $search = $_GET['search'] ?? '';
 $course_filter = $_GET['course'] ?? '';
 $sort = $_GET['sort'] ?? 'newest';
 
-$sql = "SELECT s.*, u.full_name as display_name 
+$sql = "SELECT MAX(s.id) as id, s.user_id, s.permanent_id, u.full_name as display_name, 
+               GROUP_CONCAT(DISTINCT s.course SEPARATOR ', ') as courses
         FROM students s 
         LEFT JOIN users u ON s.user_id = u.id 
         WHERE 1=1";
 $params = [];
 
 if ($search) {
-    $sql .= " AND (s.enrollment_no LIKE ? OR u.full_name LIKE ?)";
+    $sql .= " AND (s.enrollment_no LIKE ? OR s.permanent_id LIKE ? OR u.full_name LIKE ?)";
+    $params[] = "%$search%";
     $params[] = "%$search%";
     $params[] = "%$search%";
 }
@@ -41,11 +43,13 @@ if ($course_filter) {
     $params[] = $course_filter;
 }
 
+$sql .= " GROUP BY s.user_id";
+
 switch ($sort) {
-    case 'oldest':    $sql .= " ORDER BY s.created_at ASC"; break;
+    case 'oldest':    $sql .= " ORDER BY MIN(s.created_at) ASC"; break;
     case 'name_asc':  $sql .= " ORDER BY u.full_name ASC"; break;
     case 'name_desc': $sql .= " ORDER BY u.full_name DESC"; break;
-    default:          $sql .= " ORDER BY s.created_at DESC";
+    default:          $sql .= " ORDER BY MAX(s.created_at) DESC";
 }
 
 $stmt = $pdo->prepare($sql);
@@ -134,16 +138,15 @@ include '../includes/sidebar.php';
                 <tr>
                     <th style="padding:1rem 1.5rem;">#</th>
                     <th style="padding:1rem 1.25rem;">Student</th>
-                    <th style="padding:1rem 1.25rem;">Enrollment ID</th>
-                    <th style="padding:1rem 1.25rem;">Course</th>
-                    <th style="padding:1rem 1.25rem;">Joined</th>
+                    <th style="padding:1rem 1.25rem;">Student ID</th>
+                    <th style="padding:1rem 1.25rem;">Enrolled Courses</th>
                     <th style="padding:1rem 1.5rem; text-align:center;">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 <?php if (empty($students)): ?>
                     <tr>
-                        <td colspan="6" class="text-center py-5" style="color:var(--text-muted);">
+                        <td colspan="5" class="text-center py-5" style="color:var(--text-muted);">
                             <div style="width:60px;height:60px;border-radius:16px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
                                 <i class="fas fa-user-slash" style="font-size:1.5rem;color:#cbd5e1;"></i>
                             </div>
@@ -169,17 +172,18 @@ include '../includes/sidebar.php';
                             </td>
                             <td style="padding:1rem 1.25rem;">
                                 <span style="font-size:0.8rem;font-weight:600;background:#f1f5f9;color:var(--text-muted);padding:3px 10px;border-radius:6px;font-family:monospace;">
-                                    <?php echo htmlspecialchars($s['enrollment_no'] ?? 'N/A'); ?>
+                                    <?php echo htmlspecialchars($s['permanent_id'] ?? 'N/A'); ?>
                                 </span>
                             </td>
                             <td style="padding:1rem 1.25rem;">
-                                <span style="font-size:0.78rem;font-weight:600;background:rgba(99,102,241,0.1);color:var(--primary);padding:4px 10px;border-radius:6px;">
-                                    <?php echo htmlspecialchars($s['course'] ?? 'N/A'); ?>
-                                </span>
-                            </td>
-                            <td style="padding:1rem 1.25rem; font-size:0.82rem; color:var(--text-muted);">
-                                <i class="far fa-calendar-alt me-1"></i>
-                                <?php echo !empty($s['created_at']) ? date('d M, Y', strtotime($s['created_at'])) : 'N/A'; ?>
+                                <?php 
+                                $courseList = explode(', ', $s['courses']);
+                                foreach($courseList as $course): 
+                                ?>
+                                    <span style="font-size:0.78rem;font-weight:600;background:rgba(99,102,241,0.1);color:var(--primary);padding:4px 10px;border-radius:6px;margin-right:4px;display:inline-block;margin-bottom:4px;">
+                                        <?php echo htmlspecialchars($course); ?>
+                                    </span>
+                                <?php endforeach; ?>
                             </td>
                             <td style="padding:1rem 1.5rem; text-align:center;">
                                 <a href="view_student.php?id=<?php echo $s['id']; ?>"

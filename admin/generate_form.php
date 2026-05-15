@@ -4,7 +4,7 @@ checkAuth('admin');
 require_once '../config/db.php';
 
 $student_id = $_GET['id'] ?? null;
-$stmt = $pdo->prepare("SELECT sb.*, pd.*, e.*, sf.*, s.phone, s.created_at, s.id as real_id FROM students_basic sb 
+$stmt = $pdo->prepare("SELECT sb.*, pd.*, e.*, sf.*, s.phone, s.created_at, s.permanent_id, s.enrollment_no, s.id as real_id FROM students_basic sb 
                       LEFT JOIN personal_details pd ON sb.student_id = pd.student_id 
                       LEFT JOIN education e ON sb.student_id = e.student_id 
                       LEFT JOIN student_fees sf ON sb.student_id = sf.student_id 
@@ -58,16 +58,33 @@ $settings = $pdo->query("SELECT * FROM settings WHERE id=1")->fetch();
             font-family: 'Inter', sans-serif;
             color: #1a1a1a;
             margin: 0;
-            padding: 0;
+            padding: 20px 0;
+        }
+
+        @media print {
+            body {
+                background: #fff;
+                padding: 0;
+            }
+            .bill-container {
+                box-shadow: none !important;
+                margin: 0;
+                width: 100%;
+            }
+            .no-print {
+                display: none !important;
+            }
         }
 
         .bill-container {
-            max-width: 850px;
+            width: 210mm;
+            min-height: 297mm;
             margin: 0 auto;
             background: #fff;
-            padding: 5px 40px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+            padding: 8mm 12mm;
+            box-sizing: border-box;
             position: relative;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
 
         /* Header Styles */
@@ -95,8 +112,8 @@ $settings = $pdo->query("SELECT * FROM settings WHERE id=1")->fetch();
         }
 
         .logo-box {
-            width: 100px;
-            height: 100px;
+            width: 120px;
+            height: 120px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -179,19 +196,19 @@ $settings = $pdo->query("SELECT * FROM settings WHERE id=1")->fetch();
 
         /* Section Styles */
         .section-header {
-            margin-top: 8px;
-            margin-bottom: 5px;
+            margin-top: 5px;
+            margin-bottom: 3px;
         }
 
         .section-header h6 {
             font-family: 'Montserrat', sans-serif;
             font-weight: 800;
-            font-size: 12px;
+            font-size: 11px;
             color: #ffffff;
             background: #1a1a1a;
-            padding: 6px 12px;
-            border-left: 6px solid #800080;
-            letter-spacing: 1px;
+            padding: 4px 10px;
+            border-left: 5px solid #800080;
+            letter-spacing: 0.8px;
             margin: 0;
             display: flex;
             align-items: center;
@@ -201,9 +218,9 @@ $settings = $pdo->query("SELECT * FROM settings WHERE id=1")->fetch();
         .sub-header {
             font-family: 'Montserrat', sans-serif;
             font-weight: 700;
-            font-size: 10px;
+            font-size: 9px;
             color: #800080;
-            margin: 8px 0 5px 5px;
+            margin: 5px 0 3px 5px;
             text-transform: uppercase;
             letter-spacing: 0.8px;
             display: flex;
@@ -240,9 +257,9 @@ $settings = $pdo->query("SELECT * FROM settings WHERE id=1")->fetch();
         }
 
         .table-details td {
-            padding: 8px 12px;
+            padding: 5px 8px;
             border: 1px solid #eeeeee;
-            font-size: 12px;
+            font-size: 10.5px;
             color: #111111;
             font-weight: 500;
         }
@@ -359,18 +376,13 @@ $settings = $pdo->query("SELECT * FROM settings WHERE id=1")->fetch();
 </head>
 
 <body>
-    <div class="container py-4 no-print text-center">
-        <div class="d-flex justify-content-center gap-2">
-            <button onclick="window.print()" class="btn btn-primary px-4 shadow-sm">
-                <i class="fas fa-print me-2"></i>Print Form
-            </button>
-            <button onclick="downloadPDF()" class="btn btn-success px-4 shadow-sm">
-                <i class="fas fa-file-pdf me-2"></i>Download PDF
-            </button>
-            <a href="students.php" class="btn btn-outline-secondary px-4 shadow-sm">
-                <i class="fas fa-arrow-left me-2"></i>Back to Students
-            </a>
-        </div>
+    <div class="no-print" style="position: fixed; top: 20px; right: 20px; z-index: 1000; display: flex; gap: 10px;">
+        <button onclick="downloadPDF()" class="btn btn-sm btn-dark rounded-pill px-3 shadow">
+            <i class="fas fa-download me-2"></i>Download PDF
+        </button>
+        <a href="students.php" class="btn btn-sm btn-outline-secondary rounded-pill px-3 shadow bg-white">
+            <i class="fas fa-arrow-left me-2"></i>Back
+        </a>
     </div>
 
     <?php
@@ -407,7 +419,8 @@ $settings = $pdo->query("SELECT * FROM settings WHERE id=1")->fetch();
                 <div class="header-divider"></div>
 
                 <div class="info-row">
-                    <div class="info-item"><strong>Student ID:</strong> <?php echo htmlspecialchars($s['student_id']); ?></div>
+                    <div class="info-item"><strong>Student ID:</strong> <?php echo htmlspecialchars($s['permanent_id'] ?? 'Pending'); ?></div>
+                    <div class="info-item"><strong>Enrollment No:</strong> <?php echo htmlspecialchars($s['enrollment_no'] ?? 'N/A'); ?></div>
                     <div class="info-item"><strong>Joining Date:</strong> <?php echo date('d/m/Y', strtotime($s['created_at'] ?? 'now')); ?></div>
                 </div>
                 <div class="header-divider" style="margin-top: 5px;"></div>
@@ -489,8 +502,20 @@ $settings = $pdo->query("SELECT * FROM settings WHERE id=1")->fetch();
                 <th>Discounts Applied</th>
                 <td colspan="3">
                     <div style="display: flex; gap: 15px; font-size: 11px;">
-                        <span>• Special Discount: <strong>-<?php echo number_format($s['other_discount'] ?? 0, 2); ?></strong></span>
-                        <span>• Referral Discount: <strong>-<?php echo number_format($referral_discount, 2); ?></strong></span>
+                        <?php 
+                        $has_discount = false;
+                        if (($s['other_discount'] ?? 0) > 0) {
+                            echo '<span>• Special Discount: <strong>-' . number_format($s['other_discount'], 2) . '</strong></span>';
+                            $has_discount = true;
+                        }
+                        if (($referral_discount ?? 0) > 0) {
+                            echo '<span>• Referral Discount: <strong>-' . number_format($referral_discount, 2) . '</strong></span>';
+                            $has_discount = true;
+                        }
+                        if (!$has_discount) {
+                            echo '<span class="text-muted">-</span>';
+                        }
+                        ?>
                     </div>
                 </td>
             </tr>
@@ -504,19 +529,28 @@ $settings = $pdo->query("SELECT * FROM settings WHERE id=1")->fetch();
 
             <!-- Terms & Conditions -->
             <?php 
-            $refund_date = ($referral_discount > 0) 
-                ? date('Y-m-d', strtotime(($s['created_at'] ?? 'now') . ' + 15 days')) 
-                : date('Y-m-d', strtotime(($s['created_at'] ?? 'now') . ' + 7 days'));
+            // Calculate Refund Date
+            $refund_date = date('Y-m-d', strtotime(($s['created_at'] ?? 'now') . ' + 7 days'));
             
-            // Re-fetch from DB if available to be exact
+            // Try to fetch the exact date from the referral system if applicable
             $stmt_ref = $pdo->prepare("SELECT refund_expiry_date FROM referral_bonuses WHERE referred_id = ?");
             $stmt_ref->execute([$student_id]);
             $db_refund_date = $stmt_ref->fetchColumn();
-            if ($db_refund_date) $refund_date = $db_refund_date;
+            if ($db_refund_date) {
+                $refund_date = $db_refund_date;
+            } else {
+                // Fallback tiered logic if not found in referral table
+                $threshold = $settings['referral_refund_threshold'] ?? 6000;
+                $days_short = $settings['referral_refund_days_short'] ?? 7;
+                $days_long = $settings['referral_refund_days_long'] ?? 14;
+                $final_fee = $s['total_fee'] ?? 0;
+                $days = ($final_fee < $threshold) ? $days_short : $days_long;
+                $refund_date = date('Y-m-d', strtotime(($s['created_at'] ?? 'now') . " + $days days"));
+            }
             ?>
-            <div class="terms-conditions-box">
-                <h6>Terms & Conditions</h6>
-                <ol style="padding-left: 15px; margin-bottom: 0; line-height: 1.5; font-size: 9px;">
+            <div class="terms-conditions-box" style="margin-top: 4px;">
+                <h6 style="font-size: 11px; margin-bottom: 2px;">Terms & Conditions</h6>
+                <ol style="padding-left: 15px; margin-bottom: 0; line-height: 1.4; font-size: 10.5px;">
                     <?php 
                     $terms_str = $settings['terms_conditions'] ?? "";
                     if (empty(trim($terms_str))) {
@@ -543,20 +577,30 @@ $settings = $pdo->query("SELECT * FROM settings WHERE id=1")->fetch();
                     ?>
                 </ol>
             </div>
+            
+            <div style="margin: 10px 0; padding: 10px; border: 1.5px dashed #4f46e5; background: #f5f7ff; border-radius: 8px; text-align: center; page-break-inside: avoid;">
+                <span style="color: #1e293b; font-size: 10px; font-weight: 500; letter-spacing: 0.5px;">
+                    <i class="fas fa-shield-alt" style="color: #4f46e5; margin-right: 4px;"></i>
+                    100% Refund Policy will be valid till: 
+                    <strong style="color: #4f46e5; font-size: 12px; font-family: 'Outfit', sans-serif;"><?php echo date('d M Y', strtotime($refund_date)); ?></strong>
+                </span>
+            </div>
 
             <!-- Updated Declaration -->
-            <div class="declaration-box">
+            <div class="declaration-box" style="margin-top: 5px; padding: 4px; font-size: 10px;">
                 <strong>DECLARATION:</strong> I confirm that the information provided by me is true and correct. I have read and agree to the above Terms & Conditions and institute rules.
             </div>
 
             <!-- Signatures -->
-            <div class="signature-section">
+            <div class="signature-section" style="margin-top: 10px;">
                 <div class="sig-block">
                     <div class="sig-line"></div>
                     <div class="sig-label">Student's Signature</div>
                 </div>
                 <div class="sig-block text-end">
-                    <div class="sig-line"></div>
+                    <div class="signature-placeholder mb-1">
+                        <img src="../<?php echo $settings['signature_image'] ?: 'https://upload.wikimedia.org/wikipedia/commons/3/3a/Jon_Kirsch%27s_Signature.png'; ?>" class="signature-img" style="opacity: 0.9; filter: contrast(1.1); max-height: 80px;">
+                    </div>
                     <div class="signature-label">AUTHORISED SIGNATORY FOR</div>
                     <div class="signature-company"><?php echo htmlspecialchars($settings['institute_name']); ?></div>
                 </div>
@@ -567,14 +611,19 @@ $settings = $pdo->query("SELECT * FROM settings WHERE id=1")->fetch();
     <!-- PDF Generation Script -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script>
+        // Auto trigger print for user convenience
+        window.onload = function() {
+            // setTimeout(() => window.print(), 500);
+        };
+
         function downloadPDF() {
             const element = document.getElementById('printable-area');
             const studentId = '<?php echo htmlspecialchars($student_id); ?>'.replace(/[^a-z0-9]/gi, '_');
             const opt = {
-                margin:       [5, 5, 5, 5],
+                margin:       [0, 0, 0, 0], // Margin is handled by .bill-container padding
                 filename:     `Admission_Form_${studentId}.pdf`,
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
+                image:        { type: 'jpeg', quality: 1.0 },
+                html2canvas:  { scale: 3, useCORS: true, letterRendering: true },
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 

@@ -37,8 +37,8 @@ if (isset($_GET['search_id']) && !empty($_GET['search_id'])) {
                           FROM students s 
                           JOIN users u ON s.user_id = u.id 
                           JOIN student_fees sf ON s.enrollment_no = sf.student_id 
-                          WHERE s.enrollment_no = ? OR u.full_name LIKE ?");
-    $stmt->execute([$search_term, "%$search_term%"]);
+                          WHERE s.enrollment_no = ? OR s.permanent_id = ? OR u.full_name LIKE ?");
+    $stmt->execute([$search_term, $search_term, "%$search_term%"]);
     $searchResults = $stmt->fetchAll();
 }
 
@@ -97,7 +97,7 @@ include '../includes/sidebar.php';
                             <div style="width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,rgba(99,102,241,0.15),rgba(79,70,229,0.08));display:flex;align-items:center;justify-content:center;">
                                 <i class="fas fa-id-card" style="color:var(--primary);font-size:0.85rem;"></i>
                             </div>
-                            <span class="fw-bold" style="color:var(--primary);font-size:0.9rem;">Student Found: <?php echo htmlspecialchars($searchStudent['enrollment_no']); ?></span>
+                            <span class="fw-bold" style="color:var(--primary);font-size:0.9rem;">Student Found: <?php echo htmlspecialchars($searchStudent['permanent_id'] ?? $searchStudent['enrollment_no']); ?></span>
                         </div>
                         <a href="dashboard.php" class="btn-close" style="font-size:0.8rem;"></a>
                     </div>

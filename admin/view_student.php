@@ -7,6 +7,8 @@ $pageTitle = "Student Profile";
 $activePage = "students";
 
 $id = $_GET['id'] ?? 0;
+
+// Fetch current student record
 $student = $pdo->prepare("SELECT s.*, u.full_name as display_name, u.email, u.created_at as joined_at, r.full_name as referrer_name 
                            FROM students s 
                            LEFT JOIN users u ON s.user_id = u.id 
@@ -20,6 +22,11 @@ if (!$student) {
     header("Location: students.php?msg=Student Not Found");
     exit;
 }
+
+// Fetch ALL enrollments for this user
+$all_enrollments = $pdo->prepare("SELECT id, enrollment_no, course, admission_status FROM students WHERE user_id = ? ORDER BY created_at DESC");
+$all_enrollments->execute([$student['user_id']]);
+$enrollments_list = $all_enrollments->fetchAll();
 
 // Fetch enrollments
 // Fetch Basic & Personal
@@ -65,6 +72,14 @@ $feeSummary = $stmt->fetch();
 $stmt = $pdo->prepare("SELECT * FROM installments WHERE student_id = ? ORDER BY due_date ASC");
 $stmt->execute([$id]);
 $installmentsList = $stmt->fetchAll();
+
+$nextInstallmentDate = null;
+foreach ($installmentsList as $inst) {
+    if ($inst['status'] == 'Pending') {
+        $nextInstallmentDate = $inst['due_date'];
+        break;
+    }
+}
 
 // Fetch Referral Info (Who referred this student)
 $stmt = $pdo->prepare("
@@ -118,16 +133,20 @@ include '../includes/header.php';
         font-size: 0.7rem;
     }
     .nav-pills .nav-link.active {
-        background-color: #0d6efd;
-        box-shadow: 0 4px 10px rgba(13, 110, 253, 0.2);
+        background: var(--primary-gradient, linear-gradient(135deg, #6366f1, #4f46e5));
+        color: white !important;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
     }
     .nav-pills .nav-link {
-        color: #6c757d;
+        color: #64748b;
         border: 1px solid transparent;
-        margin: 0 2px;
+        margin: 0 4px;
         white-space: nowrap;
-        font-size: 0.85rem;
-        padding: 8px 15px !important;
+        font-size: 0.875rem;
+        font-weight: 600;
+        padding: 10px 20px !important;
+        border-radius: 12px !important;
+        transition: all 0.3s ease;
     }
 </style>
 <?php
@@ -147,6 +166,39 @@ include '../includes/sidebar.php';
             </div>
         </div>
         <div class="col-auto d-flex gap-2">
+            <!-- Course Switcher -->
+            <?php if (count($enrollments_list) > 1): ?>
+                <div class="dropdown me-2">
+                    <button class="btn btn-dark rounded-pill px-4 shadow-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-exchange-alt me-2"></i>Switch Course
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4 p-2">
+                        <li class="dropdown-header small text-uppercase fw-bold">Enrolled Courses</li>
+                        <?php foreach ($enrollments_list as $en): ?>
+                            <li>
+                                <a class="dropdown-item rounded-3 mb-1 <?php echo ($en['id'] == $id) ? 'active bg-primary' : ''; ?>" 
+                                   href="view_student.php?id=<?php echo $en['id']; ?>">
+                                    <div class="fw-bold"><?php echo htmlspecialchars($en['course']); ?></div>
+                                    <div class="x-small <?php echo ($en['id'] == $id) ? 'text-white-50' : 'text-muted'; ?>">
+                                        Enrollment: <?php echo $en['enrollment_no']; ?> | <?php echo ucfirst($en['admission_status']); ?>
+                                    </div>
+                                </a>
+                            </li>
+                        <?php endforeach; ?>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item rounded-3 text-primary fw-bold" href="admit.php?new=1&email=<?php echo urlencode($student['email']); ?>">
+                                <i class="fas fa-plus-circle me-2"></i>Enroll in New Course
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            <?php else: ?>
+                <a href="admit.php?new=1&email=<?php echo urlencode($student['email']); ?>" class="btn btn-outline-primary rounded-pill px-4 shadow-sm me-2">
+                    <i class="fas fa-plus-circle me-2"></i>Enroll New Course
+                </a>
+            <?php endif; ?>
+
             <a href="edit_student.php?id=<?php echo $id; ?>" class="btn btn-warning text-white rounded-pill px-4 shadow-sm">
                 <i class="fas fa-edit me-2"></i>Edit Profile
             </a>
@@ -184,18 +236,28 @@ include '../includes/sidebar.php';
                     <h5 class="fw-bold mb-1 text-dark"><?php echo htmlspecialchars($student['display_name']); ?></h5>
                 </div>
                 <hr>
-                <div class="profile-info-item"><i class="fas fa-book text-muted me-2"></i>Course:
-                    <strong><?php echo htmlspecialchars($student['course'] ?? 'No Course'); ?></strong></div>
+                <div class="profile-info-item"><i
+                        class="fas fa-book text-muted me-2"></i>Course:
+                    <strong><?php echo htmlspecialchars($student['course'] ?? 'No Course'); ?></strong>
+                    <div class="x-small text-muted ms-4">Enrollment ID: <?php echo $student['enrollment_no'] ?? 'N/A'; ?></div>
+                </div>
                 <hr class="my-2 opacity-25">
                 <div class="profile-info-item"><i
-                        class="fas fa-id-card text-muted me-2"></i>Student ID: <strong><?php echo $student['enrollment_no'] ?? 'N/A'; ?></strong>
+                        class="fas fa-user-tag text-muted me-2"></i>Student ID: <strong class="text-primary"><?php echo $student['permanent_id'] ?? 'N/A'; ?></strong>
                 </div>
                 <?php if (!empty($student['referrer_name'])): ?>
                 <div class="profile-info-item"><i class="fas fa-user-friends text-muted me-2"></i>Referred by:
                     <strong><?php echo htmlspecialchars($student['referrer_name']); ?></strong></div>
                 <?php endif; ?>
-                <div class="profile-info-item mb-0"><i class="fas fa-share-alt text-muted me-2"></i>Your Referral Code:
-                    <strong class="text-primary"><?php echo $student['referral_code'] ?? 'N/A'; ?></strong></div>
+                <div class="profile-info-item"><i class="fas fa-share-alt text-muted me-2"></i>Your Referral Code:
+                    <strong class="text-success"><?php echo $student['permanent_id'] ?? 'N/A'; ?></strong></div>
+                <div class="profile-info-item mb-0"><i class="fas fa-calendar-alt text-muted me-2"></i>Next Installment:
+                    <?php if ($nextInstallmentDate): ?>
+                        <strong class="text-danger"><?php echo date('d M Y', strtotime($nextInstallmentDate)); ?></strong>
+                    <?php else: ?>
+                        <strong class="text-success">Fully Paid</strong>
+                    <?php endif; ?>
+                </div>
 
                 <?php if ($feeSummary): ?>
                     <hr class="my-3 opacity-25">
@@ -262,55 +324,57 @@ include '../includes/sidebar.php';
                 <div class="tab-content p-2" id="profileDetailTabsContent">
                     <!-- Personal Info -->
                     <div class="tab-pane fade" id="personal-info">
+                        <div class="row g-3">
                             <div class="col-md-6">
-                                <div class="p-3 border rounded-3 bg-white">
+                                <div class="p-3 border rounded-3 bg-white h-100 shadow-sm">
                                     <label class="x-small text-muted d-block text-uppercase fw-bold mb-1">Gender</label>
                                     <span class="fw-bold text-dark"><i class="fas <?php echo ($basic['gender'] ?? '') == 'Male' ? 'fa-mars' : 'fa-venus'; ?> me-2 text-primary"></i><?php echo htmlspecialchars($basic['gender'] ?? 'N/A'); ?></span>
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="p-3 border rounded-3 bg-white">
+                                <div class="p-3 border rounded-3 bg-white h-100 shadow-sm">
                                     <label class="x-small text-muted d-block text-uppercase fw-bold mb-1">Birth Date</label>
                                     <span class="fw-bold text-dark"><i class="fas fa-birthday-cake me-2 text-primary"></i><?php echo $student['dob'] ? date('d M Y', strtotime($student['dob'])) : 'N/A'; ?></span>
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="p-3 border rounded-3 bg-white">
+                                <div class="p-3 border rounded-3 bg-white h-100 shadow-sm">
                                     <label class="x-small text-muted d-block text-uppercase fw-bold mb-1">Email Address</label>
                                     <span class="fw-bold text-dark"><i class="fas fa-envelope me-2 text-primary"></i><?php echo htmlspecialchars($student['email'] ?? 'N/A'); ?></span>
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="p-3 border rounded-3 bg-white">
+                                <div class="p-3 border rounded-3 bg-white h-100 shadow-sm">
                                     <label class="x-small text-muted d-block text-uppercase fw-bold mb-1">Phone Number</label>
                                     <span class="fw-bold text-dark"><i class="fas fa-phone me-2 text-primary"></i><?php echo htmlspecialchars($student['phone'] ?? 'N/A'); ?></span>
                                 </div>
                             </div>
                             <div class="col-md-12">
-                                <div class="p-3 border rounded-3 bg-white">
+                                <div class="p-3 border rounded-3 bg-white shadow-sm">
                                     <label class="x-small text-muted d-block text-uppercase fw-bold mb-1">Address</label>
                                     <span class="fw-medium text-dark"><i class="fas fa-map-marker-alt me-2 text-primary"></i><?php echo nl2br(htmlspecialchars($student['address'] ?: 'N/A')); ?></span>
                                 </div>
                             </div>
+                        </div>
                     </div>
 
                     <!-- Education -->
                     <div class="tab-pane fade" id="edu-info">
                         <div class="row g-4">
                             <div class="col-md-12">
-                                <div class="p-3 border rounded-3 bg-white h-100">
+                                <div class="p-3 border rounded-3 bg-white h-100 shadow-sm">
                                     <label class="x-small text-muted d-block text-uppercase fw-bold mb-1">College/University</label>
                                     <span class="fw-bold h6 d-block mt-1 text-primary"><?php echo htmlspecialchars($education['college_name'] ?? 'Not Provided'); ?></span>
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="p-3 border rounded-3 bg-white h-100">
+                                <div class="p-3 border rounded-3 bg-white h-100 shadow-sm">
                                     <label class="x-small text-muted d-block text-uppercase fw-bold mb-1">Qualification</label>
                                     <span class="fw-bold h6 d-block mt-1 text-dark"><?php echo htmlspecialchars($education['qualification'] ?? 'N/A'); ?></span>
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="p-3 border rounded-3 bg-white">
+                                <div class="p-3 border rounded-3 bg-white h-100 shadow-sm">
                                     <label class="x-small text-muted d-block text-uppercase fw-bold mb-1">Passing Year</label>
                                     <span class="fw-bold h6 d-block mt-1 text-dark"><i class="fas fa-calendar-check me-2 text-primary"></i><?php echo htmlspecialchars($education['passing_year'] ?? 'N/A'); ?></span>
                                 </div>

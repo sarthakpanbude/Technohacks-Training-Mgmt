@@ -20,6 +20,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_settings'])) {
     $terms = $_POST['terms_conditions'] ?? '';
     $discount_pct = $_POST['referral_discount_percent'] ?? 0;
     $bonus_pct = $_POST['referral_bonus_percent'] ?? 0;
+    $referral_enabled = isset($_POST['referral_system_enabled']) ? 1 : 0;
+    $refund_threshold = $_POST['referral_refund_threshold'] ?? 6000;
+    $refund_days_short = $_POST['referral_refund_days_short'] ?? 7;
+    $refund_days_long = $_POST['referral_refund_days_long'] ?? 14;
     
     try {
         $logo_path = null;
@@ -37,13 +41,36 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_settings'])) {
             }
         }
 
-        if ($logo_path) {
-            $stmt = $pdo->prepare("UPDATE settings SET institute_name=?, institute_email=?, institute_phone=?, institute_address=?, institute_website=?, slogan=?, terms_conditions=?, referral_discount_percent=?, referral_bonus_percent=?, institute_logo=? WHERE id=1");
-            $stmt->execute([$name, $email, $phone, $address, $website, $slogan, $terms, $discount_pct, $bonus_pct, $logo_path]);
-        } else {
-            $stmt = $pdo->prepare("UPDATE settings SET institute_name=?, institute_email=?, institute_phone=?, institute_address=?, institute_website=?, slogan=?, terms_conditions=?, referral_discount_percent=?, referral_bonus_percent=? WHERE id=1");
-            $stmt->execute([$name, $email, $phone, $address, $website, $slogan, $terms, $discount_pct, $bonus_pct]);
+        $signature_path = null;
+        if (isset($_FILES['signature_image']) && $_FILES['signature_image']['error'] == 0) {
+            $target_dir = "../assets/img/";
+            if (!file_exists($target_dir)) {
+                mkdir($target_dir, 0777, true);
+            }
+            $file_ext = pathinfo($_FILES["signature_image"]["name"], PATHINFO_EXTENSION);
+            $sig_name = "sig_" . time() . "." . $file_ext;
+            $target_file = $target_dir . $sig_name;
+            
+            if (move_uploaded_file($_FILES["signature_image"]["tmp_name"], $target_file)) {
+                $signature_path = "assets/img/" . $sig_name;
+            }
         }
+
+        $query = "UPDATE settings SET institute_name=?, institute_email=?, institute_phone=?, institute_address=?, institute_website=?, slogan=?, terms_conditions=?, referral_discount_percent=?, referral_bonus_percent=?, referral_system_enabled=?, referral_refund_threshold=?, referral_refund_days_short=?, referral_refund_days_long=?";
+        $params = [$name, $email, $phone, $address, $website, $slogan, $terms, $discount_pct, $bonus_pct, $referral_enabled, $refund_threshold, $refund_days_short, $refund_days_long];
+
+        if ($logo_path) {
+            $query .= ", institute_logo=?";
+            $params[] = $logo_path;
+        }
+        if ($signature_path) {
+            $query .= ", signature_image=?";
+            $params[] = $signature_path;
+        }
+
+        $query .= " WHERE id=1";
+        $stmt = $pdo->prepare($query);
+        $stmt->execute($params);
         $success = "Settings updated successfully!";
     } catch (Exception $e) {
         $error = "Error updating settings: " . $e->getMessage();
@@ -72,7 +99,7 @@ include '../includes/sidebar.php';
     <form method="POST" enctype="multipart/form-data">
         <div class="row g-3">
             <div class="col-md-7">
-                <div class="stat-card p-4">
+                <div class="stat-card p-4" style="height: auto;">
                     <div class="d-flex align-items-center mb-4">
                         <div class="bg-primary bg-opacity-10 p-3 rounded-4 me-3">
                             <i class="fas fa-university text-primary h4 mb-0"></i>
@@ -143,13 +170,26 @@ include '../includes/sidebar.php';
                                 </div>
                             </div>
                         </div>
+
+                        <div class="col-md-12 mt-4">
+                            <label class="form-label small fw-bold text-muted text-uppercase d-block">Authorised Signature</label>
+                            <div class="d-flex align-items-center gap-4 p-3 border rounded-4 bg-light">
+                                <div class="settings-logo-preview bg-white p-2 border">
+                                    <img src="../<?php echo $settings['signature_image'] ?: 'https://upload.wikimedia.org/wikipedia/commons/3/3a/Jon_Kirsch%27s_Signature.png'; ?>" id="sigPreview" class="rounded" style="max-height: 60px; max-width: 150px; object-fit: contain;">
+                                </div>
+                                <div class="flex-grow-1">
+                                    <input type="file" name="signature_image" id="sigInput" class="form-control form-control-sm rounded-pill" accept="image/*">
+                                    <small class="text-muted x-small mt-2 d-block">Transparent PNG recommended. This will appear on receipts.</small>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <div class="col-md-5">
                 <!-- Combined Control Card -->
-                <div class="stat-card border-0 shadow-sm rounded-4 overflow-hidden mb-3">
+                <div class="stat-card border-0 shadow-sm rounded-4 overflow-hidden mb-3" style="height: auto;">
                     <div class="p-4 bg-light border-bottom d-flex align-items-center">
                         <div class="bg-primary bg-opacity-10 p-2 rounded-3 me-3">
                             <i class="fas fa-sliders-h text-primary"></i>
@@ -157,9 +197,15 @@ include '../includes/sidebar.php';
                         <h5 class="fw-bold mb-0">Control Center</h5>
                     </div>
                     <div class="p-4">
-                        <!-- Feature Controls -->
+                        <!-- Referral Controls -->
                         <div class="mb-4 pb-3 border-bottom">
-                            <h6 class="fw-bold mb-3 small text-muted text-uppercase">Referral Rewards (%)</h6>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="fw-bold mb-0 small text-muted text-uppercase">Referral & Earn System</h6>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" name="referral_system_enabled" id="refSystemToggle" <?php echo ($settings['referral_system_enabled'] ?? 1) ? 'checked' : ''; ?>>
+                                </div>
+                            </div>
+                            
                             <div class="row g-3">
                                 <div class="col-6">
                                     <label class="form-label x-small fw-bold text-muted text-uppercase mb-1">Student Discount</label>
@@ -167,7 +213,6 @@ include '../includes/sidebar.php';
                                         <input type="number" step="0.01" name="referral_discount_percent" class="form-control rounded-start-3" value="<?php echo htmlspecialchars($settings['referral_discount_percent'] ?? '5.00'); ?>">
                                         <span class="input-group-text bg-white rounded-end-3">%</span>
                                     </div>
-                                    <p class="text-muted x-small mb-0 mt-1">Given to the new student.</p>
                                 </div>
                                 <div class="col-6">
                                     <label class="form-label x-small fw-bold text-muted text-uppercase mb-1">Referrer Bonus</label>
@@ -175,7 +220,30 @@ include '../includes/sidebar.php';
                                         <input type="number" step="0.01" name="referral_bonus_percent" class="form-control rounded-start-3" value="<?php echo htmlspecialchars($settings['referral_bonus_percent'] ?? '5.00'); ?>">
                                         <span class="input-group-text bg-white rounded-end-3">%</span>
                                     </div>
-                                    <p class="text-muted x-small mb-0 mt-1">Earned by the referrer.</p>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label x-small fw-bold text-muted text-uppercase mb-1">Fee Threshold for Long Period</label>
+                                    <div class="input-group input-group-sm mb-2">
+                                        <span class="input-group-text bg-light rounded-start-3">₹</span>
+                                        <input type="number" name="referral_refund_threshold" class="form-control rounded-end-3" value="<?php echo htmlspecialchars($settings['referral_refund_threshold'] ?? '6000'); ?>">
+                                    </div>
+                                    <div class="row g-2">
+                                        <div class="col-6">
+                                            <label class="form-label x-small fw-bold text-muted text-uppercase mb-1">Below Threshold</label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" name="referral_refund_days_short" class="form-control rounded-start-3" value="<?php echo htmlspecialchars($settings['referral_refund_days_short'] ?? '7'); ?>">
+                                                <span class="input-group-text bg-white rounded-end-3">Days</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label x-small fw-bold text-muted text-uppercase mb-1">Above Threshold</label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" name="referral_refund_days_long" class="form-control rounded-start-3" value="<?php echo htmlspecialchars($settings['referral_refund_days_long'] ?? '14'); ?>">
+                                                <span class="input-group-text bg-white rounded-end-3">Days</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p class="text-muted x-small mb-0 mt-2">Adjust periods based on the final fee amount.</p>
                                 </div>
                             </div>
                         </div>
@@ -227,6 +295,12 @@ document.getElementById('logoInput').onchange = evt => {
   const [file] = evt.target.files
   if (file) {
     document.getElementById('logoPreview').src = URL.createObjectURL(file)
+  }
+}
+document.getElementById('sigInput').onchange = evt => {
+  const [file] = evt.target.files
+  if (file) {
+    document.getElementById('sigPreview').src = URL.createObjectURL(file)
   }
 }
 </script>

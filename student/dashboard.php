@@ -7,22 +7,68 @@ $pageTitle = "Student Dashboard";
 $activePage = "dashboard";
 
 $userId = $_SESSION['user_id'];
-$student = $pdo->prepare("SELECT * FROM students WHERE user_id = ?");
-$student->execute([$userId]);
-$s_data = $student->fetch();
-$studentId = $s_data['id'];
 
-// Get Enrollment Data
-$enrollment = $pdo->prepare("SELECT e.*, b.batch_name, c.name as course_name FROM enrollments e JOIN batches b ON e.batch_id = b.id JOIN courses c ON b.course_id = c.id WHERE e.student_id = ? AND e.status = 'active'");
+// Fetch ALL student records (enrollments) for this user
+$all_students = $pdo->prepare("SELECT id, enrollment_no, permanent_id, course, admission_status FROM students WHERE user_id = ?");
+$all_students->execute([$userId]);
+$enrollments_list = $all_students->fetchAll();
+
+// Select active student record (either from URL or first available)
+$studentId = $_GET['enrollment_id'] ?? ($enrollments_list[0]['id'] ?? 0);
+
+// Fetch specific enrollment details
+$enrollment = $pdo->prepare("SELECT e.*, b.batch_name, c.name as course_name 
+                            FROM enrollments e 
+                            JOIN batches b ON e.batch_id = b.id 
+                            JOIN courses c ON b.course_id = c.id 
+                            WHERE e.student_id = ? AND e.status = 'active'
+                            LIMIT 1");
 $enrollment->execute([$studentId]);
 $activeEnrollment = $enrollment->fetch();
+
+// If no active enrollment found, just fetch the course name from students table as fallback
+if (!$activeEnrollment && $studentId) {
+    $fallback = $pdo->prepare("SELECT course FROM students WHERE id = ?");
+    $fallback->execute([$studentId]);
+    $f_data = $fallback->fetch();
+    if ($f_data) {
+        $activeEnrollment = ['course_name' => $f_data['course'], 'batch_name' => 'Pending Assignment'];
+    }
+}
 
 include '../includes/header.php';
 include '../includes/sidebar.php';
 ?>
 
-<main class="main-content w-100 p-4">
-    <?php include '../includes/topbar.php'; ?>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold mb-0">Student Dashboard</h2>
+        
+        <?php if (count($enrollments_list) > 1): ?>
+                <div class="dropdown">
+                    <button class="btn btn-white shadow-sm rounded-pill px-4 dropdown-toggle border" type="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-book text-primary me-2"></i> 
+                        <?php 
+                            $current_course = array_filter($enrollments_list, fn($e) => $e['id'] == $studentId);
+                            echo htmlspecialchars(reset($current_course)['course'] ?? 'Select Course');
+                        ?>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-4 p-2">
+                        <li class="dropdown-header small text-uppercase fw-bold">My Courses</li>
+                        <?php foreach ($enrollments_list as $en): ?>
+                            <li>
+                                <a class="dropdown-item rounded-3 mb-1 <?php echo ($en['id'] == $studentId) ? 'active bg-primary' : ''; ?>" 
+                                   href="dashboard.php?enrollment_id=<?php echo $en['id']; ?>">
+                                    <div class="fw-bold"><?php echo htmlspecialchars($en['course']); ?></div>
+                                    <div class="x-small <?php echo ($en['id'] == $studentId) ? 'text-white-50' : 'text-muted'; ?>">
+                                        ID: <?php echo $en['permanent_id']; ?> | Enrollment: <?php echo $en['enrollment_no']; ?>
+                                    </div>
+                                </a>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+        <?php endif; ?>
+    </div>
 
     <?php if ($activeEnrollment): ?>
     <div class="row g-4 mb-4">

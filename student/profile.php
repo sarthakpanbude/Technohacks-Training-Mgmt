@@ -11,6 +11,11 @@ $user = $pdo->prepare("SELECT u.*, s.enrollment_no, s.dob, s.phone, s.address, s
 $user->execute([$userId]);
 $userData = $user->fetch();
 
+// Fetch ALL enrollments for this user
+$enrollments = $pdo->prepare("SELECT * FROM students WHERE user_id = ? ORDER BY created_at DESC");
+$enrollments->execute([$userId]);
+$enrollments_list = $enrollments->fetchAll();
+
 // Fetch Referral System Status
 $sys_settings = $pdo->query("SELECT referral_system_enabled FROM settings WHERE id=1")->fetch();
 $referral_enabled = $sys_settings['referral_system_enabled'] ?? 1;
@@ -46,7 +51,7 @@ include '../includes/sidebar.php';
                 <img src="../assets/img/default.png" alt="Profile" class="rounded-circle border mb-3" width="120" height="120">
                 <h4 class="fw-bold"><?php echo htmlspecialchars($userData['full_name']); ?></h4>
                 <p class="text-muted mb-1"><?php echo htmlspecialchars($userData['email']); ?></p>
-                <span class="badge bg-primary rounded-pill mb-3">Student / Refer Id: <?php echo $userData['enrollment_no'] ?? 'Pending'; ?></span>
+                <span class="badge bg-primary rounded-pill mb-3">Student ID: <?php echo $enrollments_list[0]['permanent_id'] ?? 'Pending'; ?></span>
                 
                 <hr>
                 
@@ -62,23 +67,24 @@ include '../includes/sidebar.php';
                 <div class="referral-section text-start p-3 bg-light rounded-4">
                     <h6 class="fw-bold mb-2 small"><i class="fas fa-gift text-primary me-2"></i>Referral & Earn</h6>
                     <div class="mb-3">
-                        <label class="x-small text-muted fw-bold text-uppercase mb-1" style="font-size: 0.6rem;">Your Referral Code</label>
+                        <label class="x-small text-muted fw-bold text-uppercase mb-1" style="font-size: 0.6rem;">Your Referral Code (Student ID)</label>
                         <div class="input-group input-group-sm">
-                            <input type="text" id="refCode" class="form-control fw-bold text-center bg-white" value="<?php echo $userData['enrollment_no'] ?? 'N/A'; ?>" readonly>
+                            <input type="text" id="refCode" class="form-control fw-bold text-center bg-white" value="<?php echo $enrollments_list[0]['permanent_id'] ?? 'N/A'; ?>" readonly>
                             <button class="btn btn-primary" onclick="copyRefCode()"><i class="fas fa-copy"></i></button>
                         </div>
                     </div>
-                    <?php
-                    $bonusStats = $pdo->prepare("
-                        SELECT 
-                            SUM(CASE WHEN status = 'Approved' THEN bonus_amount ELSE 0 END) as earned,
-                            SUM(CASE WHEN status IN ('Pending', 'Pending Full Payment', 'Waiting Refund Period') THEN bonus_amount ELSE 0 END) as pending
-                        FROM referral_bonuses 
-                        WHERE referrer_id = ?
-                    ");
-                    $bonusStats->execute([$userData['enrollment_no']]);
-                    $bStats = $bonusStats->fetch();
-                    ?>
+<?php
+$perm_id = $enrollments_list[0]['permanent_id'];
+$bonusStats = $pdo->prepare("
+    SELECT 
+        SUM(CASE WHEN status = 'Approved' THEN bonus_amount ELSE 0 END) as earned,
+        SUM(CASE WHEN status IN ('Pending', 'Pending Full Payment', 'Waiting Refund Period') THEN bonus_amount ELSE 0 END) as pending
+    FROM referral_bonuses 
+    WHERE referrer_id = ?
+");
+$bonusStats->execute([$perm_id]);
+$bStats = $bonusStats->fetch();
+?>
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <span class="x-small text-muted d-block" style="font-size: 0.6rem;">Earned</span>
@@ -100,6 +106,23 @@ include '../includes/sidebar.php';
                     }
                 </script>
                 <?php endif; ?>
+
+                <hr>
+                <div class="text-start">
+                    <h6 class="fw-bold mb-3 small"><i class="fas fa-graduation-cap text-primary me-2"></i>My Enrolled Courses</h6>
+                    <?php foreach ($enrollments_list as $en): ?>
+                        <div class="p-2 border rounded-3 mb-2 bg-white shadow-sm">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="fw-bold small"><?php echo htmlspecialchars($en['course']); ?></div>
+                                <span class="badge bg-<?php echo ($en['admission_status'] == 'enrolled') ? 'success' : 'secondary'; ?> x-small">
+                                    <?php echo ucfirst($en['admission_status']); ?>
+                                </span>
+                            </div>
+                            <div class="x-small text-muted">Enrollment: <?php echo $en['enrollment_no']; ?></div>
+                            <a href="dashboard.php?enrollment_id=<?php echo $en['id']; ?>" class="btn btn-sm btn-link p-0 x-small text-decoration-none">View Dashboard <i class="fas fa-arrow-right ms-1"></i></a>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
             </div>
         </div>
         

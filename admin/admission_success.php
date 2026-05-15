@@ -6,7 +6,10 @@ require_once '../config/db.php';
 $student_id = $_GET['id'] ?? null;
 if (!$student_id) exit("Student ID missing");
 
-$stmt = $pdo->prepare("SELECT sb.*, sf.* FROM students_basic sb JOIN student_fees sf ON sb.student_id = sf.student_id WHERE sb.student_id = ?");
+$stmt = $pdo->prepare("SELECT sb.*, sf.*, s.id as main_id FROM students_basic sb 
+                        JOIN student_fees sf ON sb.student_id = sf.student_id 
+                        JOIN students s ON sb.student_id = s.enrollment_no 
+                        WHERE sb.student_id = ?");
 $stmt->execute([$student_id]);
 $data = $stmt->fetch();
 
@@ -80,18 +83,15 @@ include '../includes/sidebar.php';
                         </div>
 
                         <div class="d-grid gap-3">
-                            <a href="enrollment_review.php" class="btn btn-primary btn-lg rounded-pill shadow-lg py-3 fw-bold">
-                                ✨ Let's Start Your Journey <i class="fas fa-arrow-right ms-2"></i>
+                            <a href="view_student.php?id=<?php echo htmlspecialchars($data['main_id']); ?>" class="btn btn-primary btn-lg rounded-pill shadow-lg py-3 fw-bold">
+                                <i class="fas fa-user-circle me-2"></i> Go to Profile
                             </a>
                             <div class="d-flex gap-2">
-                                <a href="generate_form.php?id=<?php echo htmlspecialchars($student_id); ?>" target="_blank" class="btn btn-outline-primary rounded-pill flex-grow-1">
-                                    <i class="fas fa-file-alt me-2"></i> Print Form
-                                </a>
-                                <a href="generate_receipt.php?id=<?php echo htmlspecialchars($student_id); ?>" target="_blank" class="btn btn-outline-secondary rounded-pill flex-grow-1">
-                                    <i class="fas fa-print me-2"></i> Receipt
-                                </a>
-                                <a href="dashboard.php" class="btn btn-outline-secondary rounded-pill flex-grow-1">
+                                <a href="dashboard.php" class="btn btn-outline-secondary rounded-pill flex-grow-1 py-2">
                                     <i class="fas fa-home me-2"></i> Home
+                                </a>
+                                <a href="students.php" class="btn btn-outline-primary rounded-pill flex-grow-1 py-2">
+                                    <i class="fas fa-users me-2"></i> Students Profile (List)
                                 </a>
                             </div>
                         </div>
